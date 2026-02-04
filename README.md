@@ -1,5 +1,4 @@
 # k8s-adaptive-workflows
-<<<<<<< HEAD
 // TODO(user): Add simple overview of use/purpose
 
 ## Description
@@ -134,6 +133,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-=======
-Designing a distributed workflow system that executes DAG based tasks on Kubernetes and adapts to real-world uncertainty such as task failures, variable execution times, and dynamic resource availability. The core of the system is an adaptive scheduler that uses probabilistic modeling, runtime metrics, and ML based prediction.
->>>>>>> b22e71d826dd8022919d8901b6379500d8dfe591
