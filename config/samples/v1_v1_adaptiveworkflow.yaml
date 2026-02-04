@@ -1,0 +1,9 @@
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  labels:
+    app.kubernetes.io/name: k8s-adaptive-workflows
+    app.kubernetes.io/managed-by: kustomize
+  name: adaptiveworkflow-sample
+spec:
+  # TODO(user): Add fields here
