@@ -1,8 +1,8 @@
 # k8s-adaptive-workflows
-// TODO(user): Add simple overview of use/purpose
+// To be added soon
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+// To be added soon
 
 ## Getting Started
 
