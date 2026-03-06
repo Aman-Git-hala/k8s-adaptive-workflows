@@ -51,7 +51,14 @@ var _ = Describe("AdaptiveWorkflow Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: v1v1.AdaptiveWorkflowSpec{
+						Tasks: []v1v1.TaskTemplate{
+							{
+								Name:  "dummy-task",
+								Image: "alpine:latest",
+							},
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
