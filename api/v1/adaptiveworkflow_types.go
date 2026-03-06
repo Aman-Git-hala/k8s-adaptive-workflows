@@ -17,31 +17,87 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// TaskTemplate defines a single logical unit of work in the DAG
+type TaskTemplate struct {
+	// Name of the task
+	Name string `json:"name"`
+	// Container Image to run
+	Image string `json:"image"`
+	// Command to run in the container
+	// +optional
+	Command []string `json:"command,omitempty"`
+	// Dependencies lists the Names of other tasks that must complete before this one starts
+	// +optional
+	Dependencies []string `json:"dependencies,omitempty"`
+	// Optional baseline resources if the user wants to provide a hint, though the Inference Engine may override this.
+	// +optional
+	BaseResources corev1.ResourceRequirements `json:"baseResources,omitempty"`
+}
 
 // AdaptiveWorkflowSpec defines the desired state of AdaptiveWorkflow
 type AdaptiveWorkflowSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// Tasks is the list of all tasks comprising the DAG workflow
+	Tasks []TaskTemplate `json:"tasks"`
 
-	// foo is an example field of AdaptiveWorkflow. Edit adaptiveworkflow_types.go to remove/update
+	// MaxResources defines the absolute upper limit of cluster resources (CPU/Mem) this entire workflow can consume concurrently.
+	// The Optimizer will ensure parallel tasks never exceed this aggregated limit.
 	// +optional
-	Foo *string `json:"foo,omitempty"`
+	MaxResources corev1.ResourceList `json:"maxResources,omitempty"`
+
+	// OptimizationGoal defines what the Optimizer should prioritize. e.g., "MinimizeTime" or "MinimizeCost"
+	// +kubebuilder:default:="MinimizeTime"
+	// +optional
+	OptimizationGoal string `json:"optimizationGoal,omitempty"`
 }
+
+// TaskPhase tracks the observed state of a single task
+type TaskPhase string
+
+const (
+	TaskPhasePending   TaskPhase = "Pending"
+	TaskPhaseRunning   TaskPhase = "Running"
+	TaskPhaseSucceeded TaskPhase = "Succeeded"
+	TaskPhaseFailed    TaskPhase = "Failed"
+)
+
+// TaskStatus tracks the observed state of a single task
+type TaskStatus struct {
+	Phase TaskPhase `json:"phase"`
+	// Reference to the actual Kubernetes Pod running this task
+	// +optional
+	PodName string `json:"podName,omitempty"`
+	// The exact resources the Optimizer decided to allocate for this task based on Inference
+	// +optional
+	AllocatedResources corev1.ResourceRequirements `json:"allocatedResources,omitempty"`
+}
+
+// WorkflowPhase tracks the overall workflow execution
+type WorkflowPhase string
+
+const (
+	WorkflowPhasePending   WorkflowPhase = "Pending"
+	WorkflowPhaseRunning   WorkflowPhase = "Running"
+	WorkflowPhaseCompleted WorkflowPhase = "Completed"
+	WorkflowPhaseFailed    WorkflowPhase = "Failed"
+)
 
 // AdaptiveWorkflowStatus defines the observed state of AdaptiveWorkflow.
 type AdaptiveWorkflowStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Phase is the current high-level state of the workflow
+	// +optional
+	Phase WorkflowPhase `json:"phase,omitempty"`
 
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	// TaskStatuses maps TaskName -> TaskStatus
+	// +optional
+	TaskStatuses map[string]TaskStatus `json:"taskStatuses,omitempty"`
+
+	// Current concurrent resource usage of all running tasks
+	// +optional
+	CurrentResourceUsage corev1.ResourceList `json:"currentResourceUsage,omitempty"`
 
 	// conditions represent the current state of the AdaptiveWorkflow resource.
 	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
