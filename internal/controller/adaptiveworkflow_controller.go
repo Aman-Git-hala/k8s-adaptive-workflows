@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,7 @@ type AdaptiveWorkflowReconciler struct {
 // +kubebuilder:rbac:groups=v1.wannabe.dev,resources=adaptiveworkflows,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=v1.wannabe.dev,resources=adaptiveworkflows/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=v1.wannabe.dev,resources=adaptiveworkflows/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -58,6 +60,7 @@ func (r *AdaptiveWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Req
 func (r *AdaptiveWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1v1.AdaptiveWorkflow{}).
+		Owns(&corev1.Pod{}).
 		Named("adaptiveworkflow").
 		Complete(r)
 }
