@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package adaptive.inference.v1;
+
+option go_package = "github.com/aman-githala/k8s-adaptive-workflows/proto/gen/go/inference";
+
+// InferenceService predicts resource requirements and duration for workflow tasks.
+// The Main Controller sends metrics after pod completion and requests predictions
+// before scheduling new tasks.
+service InferenceService {
+  // Predict takes task definitions and returns per-task resource/duration predictions.
+  rpc Predict(PredictRequest) returns (PredictResponse);
+
+  // ReportMetrics sends actual execution metrics back to the inference engine
+  // so it can improve future predictions (feedback loop).
+  rpc ReportMetrics(ReportMetricsRequest) returns (ReportMetricsResponse);
+}
+
+// PredictRequest contains the tasks that need resource predictions.
+message PredictRequest {
+  string workflow_name = 1;
+  repeated TaskInfo tasks = 2;
+}
+
+// TaskInfo describes a single task for which we need a prediction.
+message TaskInfo {
+  string name = 1;
+  string image = 2;
+  repeated string command = 3;
+  repeated string dependencies = 4;
+  // Optional user-provided resource hints (millicores for CPU, MiB for memory).
+  ResourceHint base_resources = 5;
+}
+
+// ResourceHint is an optional user-provided resource estimate.
+message ResourceHint {
+  int64 cpu_millicores = 1;
+  int64 memory_mib = 2;
+}
+
+// PredictResponse contains per-task predictions.
+message PredictResponse {
+  map<string, TaskPrediction> predictions = 1;
+}
+
+// TaskPrediction is the inference engine's prediction for a single task.
+message TaskPrediction {
+  int64 cpu_millicores = 1;      // Predicted CPU in millicores
+  int64 memory_mib = 2;          // Predicted memory in MiB
+  double estimated_duration_s = 3; // Predicted wall-clock duration in seconds
+  double confidence = 4;          // 0.0-1.0, how confident the model is
+}
+
+// ReportMetricsRequest sends actual execution data for completed tasks.
+message ReportMetricsRequest {
+  string workflow_name = 1;
+  repeated TaskMetrics task_metrics = 2;
+}
+
+// TaskMetrics contains the actual observed resource usage of a completed task.
+message TaskMetrics {
+  string task_name = 1;
+  string image = 2;
+  int64 actual_cpu_millicores = 3;
+  int64 actual_memory_mib = 4;
+  double actual_duration_s = 5;
+  bool succeeded = 6;
+  string completed_at = 7; // RFC3339 timestamp
+}
+
+// ReportMetricsResponse acknowledges the metrics were recorded.
+message ReportMetricsResponse {
+  bool accepted = 1;
+}

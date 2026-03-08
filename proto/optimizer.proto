@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package adaptive.optimizer.v1;
+
+option go_package = "github.com/aman-githala/k8s-adaptive-workflows/proto/gen/go/optimizer";
+
+// OptimizerService decides which ready tasks to schedule and with what resources.
+// The Main Controller sends DAG data and predictions, and receives a schedule plan.
+service OptimizerService {
+  // Plan takes the DAG, current task statuses, predictions, and resource constraints,
+  // and returns which tasks to start now with their allocated resources.
+  rpc Plan(PlanRequest) returns (PlanResponse);
+}
+
+// PlanRequest contains everything the optimizer needs to make scheduling decisions.
+message PlanRequest {
+  string workflow_name = 1;
+  string optimization_goal = 2; // e.g., "MinimizeTime", "MinimizeCost"
+  repeated DAGTask tasks = 3;
+  map<string, TaskStatus> task_statuses = 4;
+  map<string, TaskPrediction> predictions = 5;
+  ResourceLimit max_resources = 6;
+  ResourceUsage current_usage = 7;
+}
+
+// DAGTask describes a task in the workflow DAG.
+message DAGTask {
+  string name = 1;
+  string image = 2;
+  repeated string command = 3;
+  repeated string dependencies = 4;
+  ResourceHint base_resources = 5;
+}
+
+// ResourceHint is the user-provided resource estimate.
+message ResourceHint {
+  int64 cpu_millicores = 1;
+  int64 memory_mib = 2;
+}
+
+// TaskStatus is the current state of a task in the workflow.
+message TaskStatus {
+  string phase = 1; // Pending, Running, Succeeded, Failed
+  string pod_name = 2;
+  int64 allocated_cpu_millicores = 3;
+  int64 allocated_memory_mib = 4;
+}
+
+// TaskPrediction is a per-task prediction from the inference engine.
+message TaskPrediction {
+  int64 cpu_millicores = 1;
+  int64 memory_mib = 2;
+  double estimated_duration_s = 3;
+  double confidence = 4;
+}
+
+// ResourceLimit defines the maximum resources the workflow can consume concurrently.
+message ResourceLimit {
+  int64 cpu_millicores = 1;
+  int64 memory_mib = 2;
+}
+
+// ResourceUsage tracks current aggregate resource consumption of running tasks.
+message ResourceUsage {
+  int64 cpu_millicores = 1;
+  int64 memory_mib = 2;
+}
+
+// PlanResponse contains the optimizer's scheduling decisions.
+message PlanResponse {
+  repeated TaskAllocation tasks_to_start = 1;
+}
+
+// TaskAllocation is a single scheduling decision: which task to start and with what resources.
+message TaskAllocation {
+  string task_name = 1;
+  int64 cpu_request_millicores = 2;
+  int64 memory_request_mib = 3;
+  int64 cpu_limit_millicores = 4;
+  int64 memory_limit_mib = 5;
+}
