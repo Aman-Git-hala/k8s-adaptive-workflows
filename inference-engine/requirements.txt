@@ -1,0 +1,9 @@
+grpcio==1.62.0
+grpcio-tools==1.62.0
+protobuf==4.25.3
+scikit-learn==1.4.2
+onnxruntime==1.17.3
+onnx==1.16.0
+skl2onnx==1.16.0
+psycopg2-binary==2.9.9
+numpy==1.26.4
