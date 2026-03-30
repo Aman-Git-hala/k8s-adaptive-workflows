@@ -1,0 +1,241 @@
+# K8s Adaptive Workflows — Large Workflow Sample (50+ tasks)
+#
+# This workflow simulates a large-scale ML pipeline with data processing,
+# feature engineering, model training, evaluation, and deployment stages.
+# Used for Kind/Minikube system testing.
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: ml-pipeline-large
+  labels:
+    app.kubernetes.io/name: k8s-adaptive-workflows
+spec:
+  optimizationGoal: MinimizeTime
+  maxResources:
+    cpu: "4"
+    memory: "4Gi"
+  tasks:
+    # ──────────────── Stage 1: Data Ingestion (5 parallel sources) ────────────────
+    - name: ingest-users
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Ingesting users' && sleep 2"]
+    - name: ingest-orders
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Ingesting orders' && sleep 2"]
+    - name: ingest-products
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Ingesting products' && sleep 2"]
+    - name: ingest-clickstream
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Ingesting clickstream' && sleep 3"]
+    - name: ingest-reviews
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Ingesting reviews' && sleep 2"]
+
+    # ──────────────── Stage 2: Data Validation (per source) ────────────────
+    - name: validate-users
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Validating users' && sleep 1"]
+      dependencies: ["ingest-users"]
+    - name: validate-orders
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Validating orders' && sleep 1"]
+      dependencies: ["ingest-orders"]
+    - name: validate-products
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Validating products' && sleep 1"]
+      dependencies: ["ingest-products"]
+    - name: validate-clickstream
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Validating clickstream' && sleep 1"]
+      dependencies: ["ingest-clickstream"]
+    - name: validate-reviews
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Validating reviews' && sleep 1"]
+      dependencies: ["ingest-reviews"]
+
+    # ──────────────── Stage 3: Data Cleaning (per source) ────────────────
+    - name: clean-users
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Cleaning users' && sleep 1"]
+      dependencies: ["validate-users"]
+    - name: clean-orders
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Cleaning orders' && sleep 1"]
+      dependencies: ["validate-orders"]
+    - name: clean-products
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Cleaning products' && sleep 1"]
+      dependencies: ["validate-products"]
+    - name: clean-clickstream
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Cleaning clickstream' && sleep 2"]
+      dependencies: ["validate-clickstream"]
+    - name: clean-reviews
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Cleaning reviews' && sleep 1"]
+      dependencies: ["validate-reviews"]
+
+    # ──────────────── Stage 4: Feature Engineering (10 tasks) ────────────────
+    - name: feat-user-demographics
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing user demographics features' && sleep 2"]
+      dependencies: ["clean-users"]
+    - name: feat-user-behavior
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing user behavior features' && sleep 2"]
+      dependencies: ["clean-users", "clean-clickstream"]
+    - name: feat-order-patterns
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing order pattern features' && sleep 2"]
+      dependencies: ["clean-orders"]
+    - name: feat-order-value
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing order value features' && sleep 2"]
+      dependencies: ["clean-orders", "clean-products"]
+    - name: feat-product-embed
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing product embeddings' && sleep 3"]
+      dependencies: ["clean-products"]
+    - name: feat-review-sentiment
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing review sentiment' && sleep 3"]
+      dependencies: ["clean-reviews"]
+    - name: feat-click-sequences
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing click sequences' && sleep 3"]
+      dependencies: ["clean-clickstream"]
+    - name: feat-user-product-interactions
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing user-product interactions' && sleep 2"]
+      dependencies: [
+        "clean-users", "clean-products", "clean-orders"
+      ]
+    - name: feat-temporal-patterns
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing temporal patterns' && sleep 2"]
+      dependencies: ["clean-orders", "clean-clickstream"]
+    - name: feat-cross-sell
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Computing cross-sell features' && sleep 2"]
+      dependencies: ["clean-orders", "clean-products"]
+
+    # ──────────────── Stage 5: Feature Store (merge all features) ────────────────
+    - name: merge-features
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Merging all features into store' && sleep 3"]
+      dependencies: [
+        "feat-user-demographics", "feat-user-behavior",
+        "feat-order-patterns", "feat-order-value",
+        "feat-product-embed", "feat-review-sentiment",
+        "feat-click-sequences", "feat-user-product-interactions",
+        "feat-temporal-patterns", "feat-cross-sell"
+      ]
+
+    # ──────────────── Stage 6: Train/Test Split ────────────────
+    - name: split-data
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Splitting data 80/20' && sleep 1"]
+      dependencies: ["merge-features"]
+
+    # ──────────────── Stage 7: Model Training (5 models in parallel) ────────────────
+    - name: train-lr
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Training Logistic Regression' && sleep 3"]
+      dependencies: ["split-data"]
+    - name: train-rf
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Training Random Forest' && sleep 5"]
+      dependencies: ["split-data"]
+    - name: train-xgb
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Training XGBoost' && sleep 5"]
+      dependencies: ["split-data"]
+    - name: train-nn
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Training Neural Network' && sleep 8"]
+      dependencies: ["split-data"]
+    - name: train-lgbm
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Training LightGBM' && sleep 4"]
+      dependencies: ["split-data"]
+
+    # ──────────────── Stage 8: Model Evaluation (per model) ────────────────
+    - name: eval-lr
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Evaluating LR: AUC=0.72' && sleep 1"]
+      dependencies: ["train-lr"]
+    - name: eval-rf
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Evaluating RF: AUC=0.78' && sleep 1"]
+      dependencies: ["train-rf"]
+    - name: eval-xgb
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Evaluating XGB: AUC=0.82' && sleep 1"]
+      dependencies: ["train-xgb"]
+    - name: eval-nn
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Evaluating NN: AUC=0.80' && sleep 1"]
+      dependencies: ["train-nn"]
+    - name: eval-lgbm
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Evaluating LGBM: AUC=0.81' && sleep 1"]
+      dependencies: ["train-lgbm"]
+
+    # ──────────────── Stage 9: Model Selection ────────────────
+    - name: select-best-model
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Selected XGBoost (AUC=0.82)' && sleep 1"]
+      dependencies: ["eval-lr", "eval-rf", "eval-xgb", "eval-nn", "eval-lgbm"]
+
+    # ──────────────── Stage 10: Post-Selection Analysis ────────────────
+    - name: calibrate-model
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Calibrating model probabilities' && sleep 2"]
+      dependencies: ["select-best-model"]
+    - name: explain-model
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Generating SHAP explanations' && sleep 3"]
+      dependencies: ["select-best-model"]
+    - name: fairness-audit
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Running fairness audit' && sleep 2"]
+      dependencies: ["select-best-model"]
+
+    # ──────────────── Stage 11: Model Packaging ────────────────
+    - name: export-onnx
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Exporting model to ONNX' && sleep 2"]
+      dependencies: ["calibrate-model"]
+    - name: generate-report
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Generating evaluation report' && sleep 2"]
+      dependencies: ["explain-model", "fairness-audit"]
+
+    # ──────────────── Stage 12: Deployment ────────────────
+    - name: deploy-staging
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Deploying to staging' && sleep 3"]
+      dependencies: ["export-onnx"]
+    - name: integration-tests
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Running integration tests' && sleep 5"]
+      dependencies: ["deploy-staging"]
+    - name: deploy-production
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Deploying to production' && sleep 3"]
+      dependencies: ["integration-tests", "generate-report"]
+
+    # ──────────────── Stage 13: Notification ────────────────
+    - name: notify-slack
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Sending Slack notification: Pipeline complete!'"]
+      dependencies: ["deploy-production"]
+    - name: update-dashboard
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Updating ML dashboard'"]
+      dependencies: ["deploy-production"]
+    - name: archive-artifacts
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'Archiving pipeline artifacts'"]
+      dependencies: ["deploy-production", "generate-report"]

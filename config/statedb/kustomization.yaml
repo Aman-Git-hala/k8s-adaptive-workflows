@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - postgres.yaml
+
+# Create a ConfigMap from the SQL schema file for the init container.
+configMapGenerator:
+  - name: postgres-init-schema
+    files:
+      - schema.sql=../../internal/statedb/schema.sql

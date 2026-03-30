@@ -1,0 +1,88 @@
+# K8s Adaptive Workflows — Local Development Stack
+#
+# Runs all components locally with resource caps for 8GB RAM machines.
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f        # Watch logs
+#   docker compose down           # Stop all services
+#
+# The controller runs outside Docker (via `make run`) and connects to
+# the gRPC services and PostgreSQL via localhost ports.
+
+services:
+  # ─────────────────────────────────────────────────────────
+  # PostgreSQL State DB
+  # ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: adaptiveworkflows
+      POSTGRES_USER: adaptive
+      POSTGRES_PASSWORD: adaptive-dev-password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./internal/statedb/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adaptive -d adaptiveworkflows"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────
+  # Python Inference Engine (gRPC :50051)
+  # ─────────────────────────────────────────────────────────
+  inference-engine:
+    build:
+      context: .
+      dockerfile: inference-engine/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      ONNX_MODEL_PATH: /app/model.onnx
+      DB_CONNECTION_STR: "postgres://adaptive:adaptive-dev-password@postgres:5432/adaptiveworkflows?sslmode=disable"
+      GRPC_PORT: "50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.2"
+          memory: 128M
+
+  # ─────────────────────────────────────────────────────────
+  # Go Optimizer Service (gRPC :50052)
+  # ─────────────────────────────────────────────────────────
+  optimizer:
+    build:
+      context: .
+      dockerfile: cmd/optimizer/Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      GRPC_PORT: "50052"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 32M
+
+volumes:
+  postgres_data:

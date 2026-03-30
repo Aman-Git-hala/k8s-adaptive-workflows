@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  labels:
+    app: adaptive-workflows-postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adaptive-workflows-postgres
+  labels:
+    app: adaptive-workflows-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adaptive-workflows-postgres
+  template:
+    metadata:
+      labels:
+        app: adaptive-workflows-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: adaptiveworkflows
+            - name: POSTGRES_USER
+              value: adaptive
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            - name: init-schema
+              mountPath: /docker-entrypoint-initdb.d
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "adaptive", "-d", "adaptiveworkflows"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "adaptive", "-d", "adaptiveworkflows"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: init-schema
+          configMap:
+            name: postgres-init-schema
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adaptive-workflows-postgres
+  labels:
+    app: adaptive-workflows-postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: adaptive-workflows-postgres
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+type: Opaque
+stringData:
+  password: adaptive-dev-password
+  # Connection string used by the controller.
+  connection-string: "postgres://adaptive:adaptive-dev-password@adaptive-workflows-postgres:5432/adaptiveworkflows?sslmode=disable"

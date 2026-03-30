@@ -1,135 +1,213 @@
-# k8s-adaptive-workflows
-// To be added soon
+# K8s Adaptive Workflows
 
-## Description
-// To be added soon
+A Kubernetes Operator that dynamically schedules, scales, and optimizes DAG-based workflows using ML-driven resource predictions. Built with Go, Kubebuilder, Python/ONNX, and gRPC.
 
-## Getting Started
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         User / kwf CLI                              │
+│   kwf submit workflow.yaml    kwf status my-wf    kwf list          │
+└────────────────────────────────┬────────────────────────────────────┘
+                                 │ kubectl / REST API
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Main Controller (Go Operator)                     │
+│                                                                      │
+│  ┌──────────────┐   ┌──────────────────┐   ┌───────────────────┐    │
+│  │  Reconcile   │──▶│ Inference Engine  │──▶│    Optimizer       │   │
+│  │  Loop        │   │ (gRPC :50051)     │   │ (gRPC :50052)      │   │
+│  │              │◀──│ Python + ONNX     │◀──│ Go + Greedy Algo   │   │
+│  └──────┬───────┘   └────────┬─────────┘   └───────────────────┘    │
+│         │                    │                                       │
+│         │ Create/Watch Pods  │ Read/Write Metrics                    │
+│         ▼                    ▼                                       │
+│  ┌──────────────┐   ┌──────────────────┐                            │
+│  │  K8s Pods    │   │  PostgreSQL       │                           │
+│  │  (Task Exec) │   │  State DB         │                           │
+│  └──────────────┘   └──────────────────┘                            │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Components
+
+| Component | Language | Port | Description |
+|---|---|---|---|
+| **Main Controller** | Go | — | Kubebuilder operator, reconcile loop, pod lifecycle |
+| **Inference Engine** | Python | 50051 | ONNX-based ML predictions for task resources |
+| **Optimizer Service** | Go | 50052 | Greedy DAG scheduler with resource constraints |
+| **State DB** | PostgreSQL | 5432 | Historical execution metrics for ML training |
+| **kwf CLI** | Go | — | Submit, status, list workflows |
+
+## Quick Start
 
 ### Prerequisites
-- go version v1.24.6+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+- Go 1.25+
+- Docker & Docker Compose
+- A Kubernetes cluster (Kind, Minikube, or remote)
+- kubectl configured
 
-```sh
-make docker-build docker-push IMG=<some-registry>/k8s-adaptive-workflows:tag
-```
+### Option 1: Local Development (Docker Compose + `make run`)
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+This is the fastest way to get started. The gRPC services and database run in Docker; the controller runs directly on your machine.
 
-**Install the CRDs into the cluster:**
+```bash
+# 1. Start supporting services (PostgreSQL, Inference Engine, Optimizer)
+docker compose up -d
 
-```sh
+# 2. Install CRDs into your cluster
 make install
+
+# 3. Run the controller locally (connects to your current kubeconfig context)
+make run
+
+# 4. In another terminal, submit a workflow
+kubectl apply -f config/samples/v1_v1_adaptiveworkflow.yaml
+
+# 5. Watch the workflow progress
+kubectl get adaptiveworkflows -w
+kubectl get pods -l adaptive-workflow=etl-pipeline -w
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+### Option 2: Full In-Cluster Deployment
 
-```sh
-make deploy IMG=<some-registry>/k8s-adaptive-workflows:tag
+```bash
+# 1. Build and push images
+export IMG=your-registry/k8s-adaptive-workflows:latest
+make docker-build docker-push IMG=$IMG
+
+# 2. Deploy the controller + CRDs + RBAC
+make deploy IMG=$IMG
+
+# 3. Deploy PostgreSQL state DB
+kubectl apply -k config/statedb/
+
+# 4. Submit a workflow
+kubectl apply -f config/samples/v1_v1_adaptiveworkflow.yaml
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+### Option 3: Using the `kwf` CLI
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+```bash
+# Build the CLI
+go build -o bin/kwf ./cmd/kwf/
 
-```sh
-kubectl apply -k config/samples/
+# Submit a workflow
+./bin/kwf submit config/samples/v1_v1_adaptiveworkflow.yaml
+
+# Check status
+./bin/kwf status etl-pipeline
+
+# List all workflows
+./bin/kwf list
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+## Example Workflow (ETL Pipeline)
 
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
+```yaml
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: etl-pipeline
+spec:
+  optimizationGoal: MinimizeTime
+  maxResources:
+    cpu: "2"
+    memory: "1Gi"
+  tasks:
+    - name: extract-users
+      image: python:3.12-slim
+      command: ["python", "-c", "print('Extracting...')"]
 
-```sh
-kubectl delete -k config/samples/
+    - name: transform-users
+      image: python:3.12-slim
+      command: ["python", "-c", "print('Transforming...')"]
+      dependencies: ["extract-users"]
+
+    - name: load-warehouse
+      image: python:3.12-slim
+      command: ["python", "-c", "print('Loading...')"]
+      dependencies: ["transform-users"]
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+The controller will:
+1. **Predict** resource needs via the Inference Engine (ONNX model or cold-start defaults)
+2. **Schedule** ready tasks via the Optimizer (greedy DAG scheduler with resource constraints)
+3. **Spawn** Kubernetes Pods with optimized resource requests/limits
+4. **Learn** from actual execution metrics to improve future predictions
 
-```sh
-make uninstall
+## How the DAG Execution Works
+
+```
+         extract-users    extract-orders
+              │                │
+              ▼                ▼
+        transform-users  transform-orders
+              │                │
+              └────────┬───────┘
+                       ▼
+                   join-data
+                       │
+                       ▼
+                load-warehouse
+                       │
+                       ▼
+              send-notification
 ```
 
-**UnDeploy the controller from the cluster:**
+1. **Root tasks** (no dependencies) are scheduled first (`extract-users`, `extract-orders`)
+2. When a task's **pod succeeds**, its dependents become eligible
+3. The **Optimizer** checks MaxResources — only starts new tasks if there's headroom
+4. The **Inference Engine** predicts how much CPU/memory each task actually needs
+5. After completion, **actual metrics** are fed back to PostgreSQL for future learning
 
-```sh
-make undeploy
+## Project Structure
+
+```
+├── api/v1/                    # CRD types (AdaptiveWorkflow)
+├── cmd/
+│   ├── main.go                # Controller entry point
+│   ├── kwf/main.go            # CLI tool
+│   └── optimizer/main.go      # Optimizer gRPC server
+├── config/
+│   ├── crd/                   # Generated CRDs (DO NOT EDIT)
+│   ├── samples/               # Example workflows
+│   └── statedb/               # PostgreSQL deployment manifests
+├── inference-engine/          # Python inference gRPC service
+│   ├── server.py              # gRPC server (ONNX + PostgreSQL)
+│   ├── train_model.py         # Model training script
+│   └── Dockerfile
+├── internal/
+│   ├── controller/            # Reconcile loop
+│   ├── inference/             # Go inference interface + baseline
+│   ├── optimizer/             # Go optimizer interface + greedy
+│   ├── grpcclient/            # gRPC client wrappers
+│   └── statedb/               # PostgreSQL client
+├── proto/                     # gRPC protobuf definitions
+│   ├── inference.proto
+│   ├── optimizer.proto
+│   └── gen/                   # Generated Go + Python stubs
+├── docker-compose.yml         # Local dev stack
+└── Makefile                   # Build/test/deploy
 ```
 
-## Project Distribution
+## Development
 
-Following the options to release and provide this solution to the users.
+```bash
+# Run tests
+make test
 
-### By providing a bundle with all YAML files
+# Regenerate CRDs after editing types
+make manifests generate
 
-1. Build the installer for the image built and published in the registry:
+# Build everything
+go build ./...
 
-```sh
-make build-installer IMG=<some-registry>/k8s-adaptive-workflows:tag
+# Lint
+make lint-fix
 ```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/k8s-adaptive-workflows/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v2-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
 
-Copyright 2026.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+Apache License 2.0

@@ -37,6 +37,8 @@ import (
 
 	v1v1 "github.com/aman-githala/k8s-adaptive-workflows/api/v1"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/controller"
+	"github.com/aman-githala/k8s-adaptive-workflows/internal/inference"
+	"github.com/aman-githala/k8s-adaptive-workflows/internal/optimizer"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -178,9 +180,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create pluggable components — in-process implementations by default.
+	// These can later be swapped for gRPC-backed clients via environment variables.
+	inferenceEngine := inference.NewBaselineEngine()
+	optimizerEngine := optimizer.NewGreedyOptimizer()
+
 	if err := (&controller.AdaptiveWorkflowReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Inference: inferenceEngine,
+		Optimizer: optimizerEngine,
+		Recorder:  mgr.GetEventRecorderFor("adaptive-workflow-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdaptiveWorkflow")
 		os.Exit(1)
