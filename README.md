@@ -34,8 +34,8 @@ A Kubernetes Operator that dynamically schedules, scales, and optimizes DAG-base
 | Component | Language | Port | Description |
 |---|---|---|---|
 | **Main Controller** | Go | — | Kubebuilder operator, reconcile loop, pod lifecycle |
-| **Inference Engine** | Python | 50051 | ONNX-based ML predictions for task resources |
-| **Optimizer Service** | Go | 50052 | Greedy DAG scheduler with resource constraints |
+| **Inference Engine** | Python | 50051 | ONNX-based ML predictions for task resources ([docs](inference-engine/README.md)) |
+| **Optimizer Service** | C++ | 50052 | Greedy DAG scheduler with resource constraints ([docs](optimizer-service/README.md)) |
 | **State DB** | PostgreSQL | 5432 | Historical execution metrics for ML training |
 | **kwf CLI** | Go | — | Submit, status, list workflows |
 
@@ -164,32 +164,37 @@ The controller will:
 
 ## Project Structure
 
+For detailed file-by-file explanations, see [DOCUMENTATION.md](DOCUMENTATION.md).
+
 ```
 ├── api/v1/                    # CRD types (AdaptiveWorkflow)
 ├── cmd/
 │   ├── main.go                # Controller entry point
-│   ├── kwf/main.go            # CLI tool
-│   └── optimizer/main.go      # Optimizer gRPC server
+│   └── kwf/main.go            # CLI tool
 ├── config/
 │   ├── crd/                   # Generated CRDs (DO NOT EDIT)
 │   ├── samples/               # Example workflows
 │   └── statedb/               # PostgreSQL deployment manifests
-├── inference-engine/          # Python inference gRPC service
+├── inference-engine/          # Python inference gRPC service (Standalone)
 │   ├── server.py              # gRPC server (ONNX + PostgreSQL)
 │   ├── train_model.py         # Model training script
 │   └── Dockerfile
+├── optimizer-service/         # C++ optimizer gRPC service (Standalone)
+│   ├── src/                   # C++ sources for greedy algorithm
+│   ├── CMakeLists.txt         # Build config
+│   └── Dockerfile
 ├── internal/
-│   ├── controller/            # Reconcile loop
-│   ├── inference/             # Go inference interface + baseline
-│   ├── optimizer/             # Go optimizer interface + greedy
-│   ├── grpcclient/            # gRPC client wrappers
-│   └── statedb/               # PostgreSQL client
+│   ├── controller/            # Go reconcile loop for AdaptiveWorkflow
+│   ├── inference/             # Go inference interface + local fallback
+│   ├── optimizer/             # Go optimizer interface + local fallback
+│   ├── grpcclient/            # gRPC client wrappers for Go controller
+│   └── statedb/               # PostgreSQL client for feedback loop
 ├── proto/                     # gRPC protobuf definitions
 │   ├── inference.proto
 │   ├── optimizer.proto
-│   └── gen/                   # Generated Go + Python stubs
-├── docker-compose.yml         # Local dev stack
-└── Makefile                   # Build/test/deploy
+│   └── gen/                   # Generated Go + C++ + Python stubs
+├── docker-compose.yml         # Local dev stack (Postgres + Inference + Optimizer)
+└── Makefile                   # Build/test/deploy commands
 ```
 
 ## Development

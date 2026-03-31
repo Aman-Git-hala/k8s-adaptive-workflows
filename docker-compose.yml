@@ -65,12 +65,12 @@ services:
           memory: 128M
 
   # ─────────────────────────────────────────────────────────
-  # Go Optimizer Service (gRPC :50052)
+  # C++ Optimizer Service (gRPC :50052)
   # ─────────────────────────────────────────────────────────
   optimizer:
     build:
       context: .
-      dockerfile: cmd/optimizer/Dockerfile
+      dockerfile: optimizer-service/Dockerfile
     ports:
       - "50052:50052"
     environment:

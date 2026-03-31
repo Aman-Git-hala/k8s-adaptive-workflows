@@ -37,8 +37,10 @@ import (
 
 	v1v1 "github.com/aman-githala/k8s-adaptive-workflows/api/v1"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/controller"
+	"github.com/aman-githala/k8s-adaptive-workflows/internal/grpcclient"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/inference"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/optimizer"
+	"github.com/aman-githala/k8s-adaptive-workflows/internal/statedb"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -180,16 +182,64 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create pluggable components — in-process implementations by default.
-	// These can later be swapped for gRPC-backed clients via environment variables.
-	inferenceEngine := inference.NewBaselineEngine()
-	optimizerEngine := optimizer.NewGreedyOptimizer()
+	// ─────────────────────────────────────────────────────────────
+	// Create pluggable components.
+	// Default: in-process Go implementations.
+	// If gRPC env vars are set, use remote services instead.
+	// ─────────────────────────────────────────────────────────────
+	var inferenceEngine inference.Engine
+	var optimizerEngine optimizer.Optimizer
+
+	// Inference Engine: gRPC or in-process baseline.
+	if addr := os.Getenv("INFERENCE_GRPC_ADDR"); addr != "" {
+		setupLog.Info("Using gRPC Inference Engine", "addr", addr)
+		client, err := grpcclient.NewInferenceClient(addr)
+		if err != nil {
+			setupLog.Error(err, "failed to connect to gRPC inference engine")
+			os.Exit(1)
+		}
+		inferenceEngine = client
+	} else {
+		setupLog.Info("Using in-process BaselineEngine (no INFERENCE_GRPC_ADDR set)")
+		inferenceEngine = inference.NewBaselineEngine()
+	}
+
+	// Optimizer: gRPC or in-process greedy.
+	if addr := os.Getenv("OPTIMIZER_GRPC_ADDR"); addr != "" {
+		setupLog.Info("Using gRPC Optimizer", "addr", addr)
+		client, err := grpcclient.NewOptimizerClient(addr)
+		if err != nil {
+			setupLog.Error(err, "failed to connect to gRPC optimizer")
+			os.Exit(1)
+		}
+		optimizerEngine = client
+	} else {
+		setupLog.Info("Using in-process GreedyOptimizer (no OPTIMIZER_GRPC_ADDR set)")
+		optimizerEngine = optimizer.NewGreedyOptimizer()
+	}
+
+	// State DB: PostgreSQL or no-op.
+	var stateDB statedb.StateDB
+	if connStr := os.Getenv("STATEDB_CONNECTION_STR"); connStr != "" {
+		setupLog.Info("Connecting to StateDB (PostgreSQL)")
+		db, err := statedb.NewPostgresStateDB(connStr)
+		if err != nil {
+			setupLog.Error(err, "failed to connect to StateDB, falling back to no-op")
+			stateDB = statedb.NewNoOpStateDB()
+		} else {
+			stateDB = db
+		}
+	} else {
+		setupLog.Info("No STATEDB_CONNECTION_STR set, using no-op StateDB")
+		stateDB = statedb.NewNoOpStateDB()
+	}
 
 	if err := (&controller.AdaptiveWorkflowReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		Inference: inferenceEngine,
 		Optimizer: optimizerEngine,
+		StateDB:   stateDB,
 		Recorder:  mgr.GetEventRecorderFor("adaptive-workflow-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdaptiveWorkflow")

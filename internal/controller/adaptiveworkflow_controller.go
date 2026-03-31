@@ -38,6 +38,7 @@ import (
 	v1 "github.com/aman-githala/k8s-adaptive-workflows/api/v1"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/inference"
 	"github.com/aman-githala/k8s-adaptive-workflows/internal/optimizer"
+	"github.com/aman-githala/k8s-adaptive-workflows/internal/statedb"
 )
 
 const (
@@ -54,6 +55,7 @@ type AdaptiveWorkflowReconciler struct {
 	Scheme    *runtime.Scheme
 	Inference inference.Engine
 	Optimizer optimizer.Optimizer
+	StateDB   statedb.StateDB
 	Recorder  record.EventRecorder
 }
 
@@ -305,6 +307,39 @@ func (r *AdaptiveWorkflowReconciler) syncPodsToStatus(ctx context.Context, wf *v
 			wf.Status.TaskStatuses[taskName] = ts
 			r.Recorder.Event(wf, corev1.EventTypeNormal, "TaskSucceeded",
 				fmt.Sprintf("Task %q completed successfully", taskName))
+
+			// Report metrics to StateDB
+			if r.StateDB != nil {
+				duration := 0.0
+				if pod.Status.StartTime != nil {
+					duration = time.Since(pod.Status.StartTime.Time).Seconds()
+				} else {
+					duration = time.Since(pod.CreationTimestamp.Time).Seconds()
+				}
+
+				// Use requested limits as a proxy for actual usage if actual usage is unknown
+				cpuReq := ts.AllocatedResources.Requests.Cpu().MilliValue()
+				memReq := ts.AllocatedResources.Requests.Memory().Value() / (1024 * 1024)
+
+				image := "unknown"
+				if len(pod.Spec.Containers) > 0 {
+					image = pod.Spec.Containers[0].Image
+				}
+
+				err := r.StateDB.RecordExecution(ctx, statedb.TaskExecution{
+					WorkflowName: wf.Name,
+					TaskName:     taskName,
+					Image:        image,
+					ActualCPU:    cpuReq,
+					ActualMemMiB: memReq,
+					DurationS:    duration,
+					Succeeded:    true,
+					CompletedAt:  time.Now(),
+				})
+				if err != nil {
+					logf.FromContext(ctx).Error(err, "Failed to record task execution to StateDB", "task", taskName)
+				}
+			}
 		case corev1.PodFailed:
 			ts.Phase = v1.TaskPhaseFailed
 			wf.Status.TaskStatuses[taskName] = ts
