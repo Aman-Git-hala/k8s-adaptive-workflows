@@ -11,14 +11,14 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies first (layer caching).
-COPY requirements.txt .
+COPY inference-engine/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy proto stubs.
-COPY ../proto/gen/python/ /app/proto/gen/python/
+# Copy proto stubs (context is project root, per docker-compose.yml).
+COPY proto/gen/python/ /app/proto/gen/python/
 
 # Copy application code.
-COPY train_model.py server.py ./
+COPY inference-engine/train_model.py inference-engine/server.py ./
 
 # Train the model during build (so it's baked into the image).
 RUN python train_model.py --output /app/model.onnx --samples 5000
