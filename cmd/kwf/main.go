@@ -205,13 +205,13 @@ func statusCmd() *cobra.Command {
 			// Print task table.
 			fmt.Println()
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "TASK\tPHASE\tPOD\tCPU REQ\tMEM REQ")
-			fmt.Fprintln(w, "────\t─────\t───\t───────\t───────")
+			_, _ = fmt.Fprintln(w, "TASK\tPHASE\tPOD\tCPU REQ\tMEM REQ")
+			_, _ = fmt.Fprintln(w, "────\t─────\t───\t───────\t───────")
 
 			for _, task := range wf.Spec.Tasks {
 				ts, ok := wf.Status.TaskStatuses[task.Name]
 				if !ok {
-					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", task.Name, "Unknown", "-", "-", "-")
+					_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", task.Name, "Unknown", "-", "-", "-")
 					continue
 				}
 				cpu := "-"
@@ -226,10 +226,10 @@ func statusCmd() *cobra.Command {
 				if podName == "" {
 					podName = "-"
 				}
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 					task.Name, ts.Phase, podName, cpu, mem)
 			}
-			w.Flush()
+			_ = w.Flush()
 
 			// Print conditions.
 			if len(wf.Status.Conditions) > 0 {
@@ -282,9 +282,9 @@ func listCmd() *cobra.Command {
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			if allNamespaces {
-				fmt.Fprintln(w, "NAMESPACE\tNAME\tPHASE\tTASKS\tAGE")
+				_, _ = fmt.Fprintln(w, "NAMESPACE\tNAME\tPHASE\tTASKS\tAGE")
 			} else {
-				fmt.Fprintln(w, "NAME\tPHASE\tTASKS\tAGE")
+				_, _ = fmt.Fprintln(w, "NAME\tPHASE\tTASKS\tAGE")
 			}
 
 			for _, wf := range wfList.Items {
@@ -298,14 +298,14 @@ func listCmd() *cobra.Command {
 				taskInfo := fmt.Sprintf("%d (%d running)", len(wf.Spec.Tasks), running)
 
 				if allNamespaces {
-					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+					_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 						wf.Namespace, wf.Name, wf.Status.Phase, taskInfo, age)
 				} else {
-					fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+					_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 						wf.Name, wf.Status.Phase, taskInfo, age)
 				}
 			}
-			w.Flush()
+			_ = w.Flush()
 
 			return nil
 		},

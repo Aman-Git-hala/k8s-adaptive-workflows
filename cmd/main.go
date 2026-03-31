@@ -240,7 +240,7 @@ func main() {
 		Inference: inferenceEngine,
 		Optimizer: optimizerEngine,
 		StateDB:   stateDB,
-		Recorder:  mgr.GetEventRecorderFor("adaptive-workflow-controller"),
+		Recorder:  mgr.GetEventRecorderFor("adaptive-workflow-controller"), //nolint:staticcheck
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdaptiveWorkflow")
 		os.Exit(1)

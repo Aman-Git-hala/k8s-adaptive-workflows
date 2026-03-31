@@ -43,12 +43,9 @@ type InferenceClient struct {
 
 // NewInferenceClient creates a new gRPC-backed inference engine client.
 func NewInferenceClient(addr string) (*InferenceClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, addr,
+	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to inference engine at %s: %w", addr, err)
