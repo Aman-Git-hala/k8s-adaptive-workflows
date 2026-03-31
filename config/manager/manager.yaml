@@ -65,6 +65,13 @@ spec:
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
+        env:
+        - name: INFERENCE_GRPC_ADDR
+          value: "k8s-adaptive-workflows-inference-engine.k8s-adaptive-workflows-system.svc.cluster.local:50051"
+        - name: OPTIMIZER_GRPC_ADDR
+          value: "k8s-adaptive-workflows-optimizer-service.k8s-adaptive-workflows-system.svc.cluster.local:50052"
+        - name: STATEDB_CONNECTION_STR
+          value: "postgres://postgres:postgres@k8s-adaptive-workflows-statedb.k8s-adaptive-workflows-system.svc.cluster.local:5432/adaptiveworkflows?sslmode=disable"
         ports: []
         securityContext:
           readOnlyRootFilesystem: true

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: optimizer-service
+  namespace: system
+  labels:
+    app: optimizer-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: optimizer-service
+  template:
+    metadata:
+      labels:
+        app: optimizer-service
+    spec:
+      containers:
+      - name: optimizer
+        image: optimizer-service:latest
+        ports:
+        - containerPort: 50052
+        env:
+        - name: GRPC_PORT
+          value: "50052"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: optimizer-service
+  namespace: system
+spec:
+  selector:
+    app: optimizer-service
+  ports:
+  - port: 50052
+    targetPort: 50052

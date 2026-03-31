@@ -103,6 +103,31 @@ go build -o bin/kwf ./cmd/kwf/
 ./bin/kwf list
 ```
 
+### Option 4: Local Kubernetes (Docker-Native with Kind)
+
+This is the best way to run a real Kubernetes environment using only Docker.
+
+```bash
+# 1. Create a local Kind cluster
+kind create cluster --name k8s-adaptive-workflows
+
+# 2. Build local images
+make docker-build IMG=controller:latest
+docker build -t inference-engine:latest -f inference-engine/Dockerfile .
+docker build -t optimizer-service:latest -f optimizer-service/Dockerfile .
+
+# 3. Load local images into the Kind cluster (No need to push to GitHub/Registry!)
+kind load docker-image controller:latest --name k8s-adaptive-workflows
+kind load docker-image inference-engine:latest --name k8s-adaptive-workflows
+kind load docker-image optimizer-service:latest --name k8s-adaptive-workflows
+
+# 4. Deploy everything (Controller + Optimizer + Inference + DB + CRDs)
+make deploy IMG=controller:latest
+
+# 5. Submit the sample workflow
+kubectl apply -f config/samples/v1_v1_adaptiveworkflow.yaml
+```
+
 ## Example Workflow (ETL Pipeline)
 
 ```yaml
