@@ -26,6 +26,26 @@ import (
 	v1 "github.com/aman-githala/k8s-adaptive-workflows/api/v1"
 )
 
+// ============================================================================
+// Input Types (Predictions from Inference Engine)
+// ============================================================================
+
+// TaskPrediction holds a single task's predicted resource needs and duration.
+type TaskPrediction struct {
+	// EstimatedDuration is the predicted wall-clock run time in seconds.
+	EstimatedDuration float64
+	// EstimatedResources are the predicted CPU/Memory needs.
+	EstimatedResources corev1.ResourceRequirements
+}
+
+// Predictions holds per-task predictions provided by the Inference Engine.
+// The Optimizer uses these to make informed scheduling decisions.
+type Predictions map[string]TaskPrediction
+
+// ============================================================================
+// Output Types (Optimizer Decision)
+// ============================================================================
+
 // TaskAllocation describes the resources the optimizer has decided
 // to assign to a single task.
 type TaskAllocation struct {
@@ -43,26 +63,28 @@ type SchedulePlan struct {
 	TasksToStart []TaskAllocation
 }
 
-// Predictions holds per-task predictions provided by the Inference Engine.
-// The Optimizer uses these to make informed scheduling decisions.
-type Predictions map[string]TaskPrediction
-
-// TaskPrediction holds a single task's predicted resource needs and duration.
-type TaskPrediction struct {
-	// EstimatedDuration is the predicted wall-clock run time in seconds.
-	EstimatedDuration float64
-	// EstimatedResources are the predicted CPU/Memory needs.
-	EstimatedResources corev1.ResourceRequirements
-}
+// ============================================================================
+// Optimizer Interface
+// ============================================================================
 
 // Optimizer decides which ready tasks to schedule and with what resources,
 // given the current state of the workflow, predictions, and constraints.
 type Optimizer interface {
-	// Plan takes the full workflow spec, the current task statuses,
-	// inference predictions, and returns a SchedulePlan of tasks to start now.
+	// Plan analyzes the workflow state and returns a SchedulePlan indicating
+	// which tasks should be started in the current reconciliation cycle with
+	// their respective resource allocations.
+	//
+	// Parameters:
+	//   - spec: The complete workflow specification
+	//   - currentTaskStatuses: Map of task names to their current execution status
+	//   - inferencePredictions: Predictions from the Inference Engine for resource needs
+	//
+	// Returns:
+	//   - SchedulePlan: The tasks to start and their resource allocations
+	//   - error: Any error encountered during planning
 	Plan(
 		spec v1.AdaptiveWorkflowSpec,
-		taskStatuses map[string]v1.TaskStatus,
-		predictions Predictions,
+		currentTaskStatuses map[string]v1.TaskStatus,
+		inferencePredictions Predictions,
 	) (SchedulePlan, error)
 }
