@@ -84,7 +84,7 @@ var _ = Describe("AdaptiveWorkflow Controller", func() {
 				return string(createdWf.Status.Phase)
 			}, timeout, interval).Should(Equal(string(v1.WorkflowPhaseRunning)))
 
-			Expect(len(createdWf.Status.TaskStatuses)).To(Equal(2))
+			Expect(createdWf.Status.TaskStatuses).To(HaveLen(2))
 			Expect(string(createdWf.Status.TaskStatuses["task1"].Phase)).To(Equal(string(v1.TaskPhaseRunning)))
 			Expect(string(createdWf.Status.TaskStatuses["task2"].Phase)).To(Equal(string(v1.TaskPhaseRunning)))
 
