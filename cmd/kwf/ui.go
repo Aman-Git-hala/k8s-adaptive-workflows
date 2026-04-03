@@ -51,7 +51,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -84,7 +85,9 @@ func handleWorkflows(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(wfList)
+		if err := json.NewEncoder(w).Encode(wfList); err != nil {
+			log.Printf("failed to encode workflow list: %v", err)
+		}
 		return
 	}
 
@@ -124,7 +127,9 @@ func handleWorkflows(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(map[string]string{"status": "created", "name": wf.Name})
+			if err := json.NewEncoder(w).Encode(map[string]string{"status": "created", "name": wf.Name}); err != nil {
+				log.Printf("failed to encode create response: %v", err)
+			}
 		} else {
 			existing.Spec = wf.Spec
 			if err := c.Update(ctx, existing); err != nil {
@@ -132,7 +137,9 @@ func handleWorkflows(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{"status": "updated", "name": wf.Name})
+			if err := json.NewEncoder(w).Encode(map[string]string{"status": "updated", "name": wf.Name}); err != nil {
+				log.Printf("failed to encode update response: %v", err)
+			}
 		}
 		return
 	}
@@ -166,7 +173,9 @@ func handleWorkflowDetail(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(wf)
+		if err := json.NewEncoder(w).Encode(wf); err != nil {
+			log.Printf("failed to encode workflow: %v", err)
+		}
 		return
 	}
 
@@ -181,7 +190,9 @@ func handleWorkflowDetail(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "deleted"}); err != nil {
+			log.Printf("failed to encode delete response: %v", err)
+		}
 		return
 	}
 
