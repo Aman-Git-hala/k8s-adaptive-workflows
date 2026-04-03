@@ -1,0 +1,788 @@
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: massive-52-task-dag
+  namespace: default
+spec:
+  optimizationGoal: MinimizeTime
+  maxResources:
+    cpu: "1"
+    memory: "1Gi"
+  tasks:
+    - name: genesis-node
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Genesis node starting...\" && sleep 1"
+    - name: ingest-flakey-0
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-1
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-2
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-3
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-4
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-5
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-6
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-7
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-8
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: ingest-flakey-9
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - |
+          attempts=0
+          while [ $attempts -lt 5 ]; do
+            if [ $((RANDOM % 5)) -eq 0 ]; then
+              echo "Ingest succeeded on attempt $((attempts+1))!"
+              exit 0
+            fi
+            echo "Ingest failed attempt $((attempts+1)), retrying in 1s..."
+            sleep 1
+            attempts=$((attempts+1))
+          done
+          echo "All 5 retries exhausted, forcing success to avoid failing the whole DAG."
+          exit 0
+      dependencies:
+        - genesis-node
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: process-batch-0
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 0...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-0
+        - ingest-flakey-1
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-1
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 1...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-1
+        - ingest-flakey-2
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-2
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 2...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-2
+        - ingest-flakey-3
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-3
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 3...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-3
+        - ingest-flakey-4
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-4
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 4...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-4
+        - ingest-flakey-5
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-5
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 5...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-5
+        - ingest-flakey-6
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-6
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 6...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-6
+        - ingest-flakey-7
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-7
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 7...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-7
+        - ingest-flakey-8
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-8
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 8...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-8
+        - ingest-flakey-9
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-9
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 9...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-9
+        - ingest-flakey-0
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-10
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 10...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-0
+        - ingest-flakey-1
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-11
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 11...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-1
+        - ingest-flakey-2
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-12
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 12...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-2
+        - ingest-flakey-3
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-13
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 13...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-3
+        - ingest-flakey-4
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-14
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 14...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-4
+        - ingest-flakey-5
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-15
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 15...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-5
+        - ingest-flakey-6
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-16
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 16...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-6
+        - ingest-flakey-7
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-17
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 17...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-7
+        - ingest-flakey-8
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-18
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 18...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-8
+        - ingest-flakey-9
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: process-batch-19
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Processing batch 19...\" && sleep 2"
+      dependencies:
+        - ingest-flakey-9
+        - ingest-flakey-0
+      baseResources:
+        requests:
+          cpu: 40m
+          memory: 64Mi
+    - name: aggregate-0
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 0...\" && sleep 3"
+      dependencies:
+        - process-batch-0
+        - process-batch-1
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-1
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 1...\" && sleep 3"
+      dependencies:
+        - process-batch-2
+        - process-batch-3
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-2
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 2...\" && sleep 3"
+      dependencies:
+        - process-batch-4
+        - process-batch-5
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-3
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 3...\" && sleep 3"
+      dependencies:
+        - process-batch-6
+        - process-batch-7
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-4
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 4...\" && sleep 3"
+      dependencies:
+        - process-batch-8
+        - process-batch-9
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-5
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 5...\" && sleep 3"
+      dependencies:
+        - process-batch-10
+        - process-batch-11
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-6
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 6...\" && sleep 3"
+      dependencies:
+        - process-batch-12
+        - process-batch-13
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-7
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 7...\" && sleep 3"
+      dependencies:
+        - process-batch-14
+        - process-batch-15
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-8
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 8...\" && sleep 3"
+      dependencies:
+        - process-batch-16
+        - process-batch-17
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: aggregate-9
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Aggregating 9...\" && sleep 3"
+      dependencies:
+        - process-batch-18
+        - process-batch-19
+      baseResources:
+        requests:
+          cpu: 60m
+          memory: 128Mi
+    - name: validate-0
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 0...\" && sleep 1"
+      dependencies:
+        - aggregate-0
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-1
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 1...\" && sleep 1"
+      dependencies:
+        - aggregate-1
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-2
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 2...\" && sleep 1"
+      dependencies:
+        - aggregate-2
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-3
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 3...\" && sleep 1"
+      dependencies:
+        - aggregate-3
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-4
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 4...\" && sleep 1"
+      dependencies:
+        - aggregate-4
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-5
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 5...\" && sleep 1"
+      dependencies:
+        - aggregate-5
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-6
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 6...\" && sleep 1"
+      dependencies:
+        - aggregate-6
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-7
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 7...\" && sleep 1"
+      dependencies:
+        - aggregate-7
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-8
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 8...\" && sleep 1"
+      dependencies:
+        - aggregate-8
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: validate-9
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"Validating model 9...\" && sleep 1"
+      dependencies:
+        - aggregate-9
+      baseResources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+    - name: publish-results
+      image: busybox
+      command:
+        - "sh"
+        - "-c"
+        - "echo \"All 52 tasks executed successfully! DAG complete.\""
+      dependencies:
+        - validate-0
+        - validate-1
+        - validate-2
+        - validate-3
+        - validate-4
+        - validate-5
+        - validate-6
+        - validate-7
+        - validate-8
+        - validate-9
+      baseResources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
