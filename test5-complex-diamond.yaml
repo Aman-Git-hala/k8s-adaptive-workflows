@@ -1,0 +1,38 @@
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: complex-diamond
+spec:
+  optimizationGoal: MinimizeTime
+  maxResources:
+    cpu: "2"
+    memory: "1Gi"
+  tasks:
+    - name: origin
+      image: alpine:latest
+      command: ["echo", "The origin of the diamond"]
+
+    - name: path-left-1
+      image: alpine:latest
+      command: ["sleep", "2"]
+      dependencies: ["origin"]
+
+    - name: path-left-2
+      image: alpine:latest
+      command: ["sleep", "2"]
+      dependencies: ["path-left-1"]
+
+    - name: path-right-1
+      image: alpine:latest
+      command: ["sleep", "3"]
+      dependencies: ["origin"]
+      
+    - name: cross-path-middle
+      image: alpine:latest
+      command: ["sleep", "1"]
+      dependencies: ["path-left-1", "path-right-1"]
+
+    - name: apex-convergence
+      image: alpine:latest
+      command: ["echo", "The diamond apex reached!"]
+      dependencies: ["path-left-2", "cross-path-middle"]

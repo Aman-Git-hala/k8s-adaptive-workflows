@@ -1,0 +1,54 @@
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: ml-training-pipeline
+spec:
+  optimizationGoal: MinimizeCost
+  # Limit total execution pool slightly so optimizer must schedule intelligently
+  maxResources:
+    cpu: "4"
+    memory: "4Gi"
+  tasks:
+    - name: download-dataset
+      image: python:3.12-slim
+      command: ["python", "-c", "print('Downloading 10GB dataset to volume...')"]
+      baseResources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+
+    - name: data-cleaning
+      image: python:3.12-slim
+      command: ["python", "-c", "import time; time.sleep(3); print('Scrubbing data...')"]
+      dependencies: ["download-dataset"]
+      baseResources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+
+    - name: train-xgboost
+      image: python:3.12-slim
+      command: ["python", "-c", "import time; time.sleep(10); print('Training XGBoost model...')"]
+      dependencies: ["data-cleaning"]
+      baseResources:
+        requests:
+          cpu: "2"
+          memory: 2Gi
+
+    - name: train-random-forest
+      image: python:3.12-slim
+      command: ["python", "-c", "import time; time.sleep(15); print('Training RF model...')"]
+      dependencies: ["data-cleaning"]
+      baseResources:
+        requests:
+          cpu: "2"
+          memory: 2Gi
+          
+    - name: evaluate-models
+      image: python:3.12-slim
+      command: ["python", "-c", "print('Comparing accuracy metrics...')"]
+      dependencies: ["train-xgboost", "train-random-forest"]
+      baseResources:
+        requests:
+          cpu: 500m
+          memory: 256Mi

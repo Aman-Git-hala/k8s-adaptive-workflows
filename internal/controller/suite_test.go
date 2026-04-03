@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	v1v1 "github.com/aman-githala/k8s-adaptive-workflows/api/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -46,6 +47,10 @@ var (
 	testEnv   *envtest.Environment
 	cfg       *rest.Config
 	k8sClient client.Client
+
+	mockInf *MockInferenceEngine
+	mockOpt *MockOptimizer
+	mockDB  *MockStateDB
 )
 
 func TestControllers(t *testing.T) {
@@ -84,6 +89,31 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	mockInf = &MockInferenceEngine{}
+	mockOpt = &MockOptimizer{}
+	mockDB = &MockStateDB{}
+
+	err = (&AdaptiveWorkflowReconciler{
+		Client:    k8sManager.GetClient(),
+		Scheme:    k8sManager.GetScheme(),
+		Inference: mockInf,
+		Optimizer: mockOpt,
+		StateDB:   mockDB,
+		Recorder:  k8sManager.GetEventRecorderFor("adaptiveworkflow-controller"),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		defer GinkgoRecover()
+		err = k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
 })
 
 var _ = AfterSuite(func() {

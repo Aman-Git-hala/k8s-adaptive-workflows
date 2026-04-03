@@ -66,6 +66,7 @@ and list adaptive workflow DAGs.`,
 	rootCmd.AddCommand(submitCmd())
 	rootCmd.AddCommand(statusCmd())
 	rootCmd.AddCommand(listCmd())
+	rootCmd.AddCommand(uiCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

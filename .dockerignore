@@ -9,3 +9,9 @@
 # Re-include Go module files
 !go.mod
 !go.sum
+
+# Re-include needed services and proto files for Docker Compose builds
+!proto/**
+!inference-engine/**
+!optimizer-service/**
+
