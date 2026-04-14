@@ -1,758 +1,191 @@
 ================================================================================
-     K8s ADAPTIVE WORKFLOWS — COMPLETE USER MANUAL (FROM ZERO)
+          K8s ADAPTIVE WORKFLOWS — USER MANUAL
 ================================================================================
 
-This guide assumes you have a fresh Mac laptop with NOTHING installed.
-Follow every step in order. Do NOT skip anything.
-
-Every command is meant to be copy-pasted into the Terminal app.
-Open Terminal: press Cmd+Space, type "Terminal", press Enter.
-
-================================================================================
-PART 0: WHAT IS THIS PROJECT?
-================================================================================
-
-This project is a Kubernetes Operator that runs DAG (Directed Acyclic Graph)
-workflows — basically a pipeline of tasks where some tasks depend on others.
-
-What makes it special:
-  - A Python ML Inference Engine PREDICTS how much CPU/RAM each task needs.
-  - A C++ Optimizer schedules tasks like Tetris — packing them within limits.
-  - A Go controller ties everything together inside Kubernetes.
-  - A React web dashboard lets you visually build and monitor workflows.
-
-Components at a glance:
-  1. Go Controller      — the brain, runs the reconciliation loop
-  2. Python Inference    — ML predictions via gRPC (port 50051)
-  3. C++ Optimizer       — scheduling decisions via gRPC (port 50052)
-  4. PostgreSQL          — stores historical execution data (port 5432)
-  5. React Dashboard     — web UI served by the kwf CLI (port 8080)
-  6. kwf CLI             — command-line tool to submit/monitor workflows
-
+WHAT IS THIS?
+  A Kubernetes Operator that runs task pipelines (DAGs) smartly.
+  It uses ML to predict resource needs and a C++ optimizer to schedule
+  tasks like Tetris — never exceeding cluster memory limits.
 
 ================================================================================
-PART 1: INSTALL PREREQUISITES
+TUTORIAL A: macOS SETUP
 ================================================================================
 
-These are one-time installs. If you already have any of these, skip that step.
+STEP 1 — Install prerequisites (one-time)
+──────────────────────────────────────────
 
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.1: Install Homebrew (Mac package manager)
-────────────────────────────────────────────────────────────────────────────────
+  # Install Homebrew
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-Paste this in Terminal and press Enter. Follow the prompts (enter your password
-when asked, say "yes" if it asks to install Command Line Tools):
+  # Install everything else
+  brew install go kubectl kind node git
+  brew install --cask docker
 
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  Open Docker Desktop from Applications. Wait for whale icon to steady.
 
-After it finishes, it may tell you to run a few commands to add brew to your
-PATH. Follow those instructions. They usually look like:
+STEP 2 — Get the code
+─────────────────────
 
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-    eval "$(/opt/homebrew/bin/brew shellenv)"
+  git clone https://github.com/Aman-Git-hala/k8s-adaptive-workflows.git
+  cd k8s-adaptive-workflows
 
-Verify it works:
+STEP 3 — Create cluster & install CRD
+──────────────────────────────────────
 
-    brew --version
+  kind create cluster --name adaptive-test
+  make manifests && make install
 
-You should see something like "Homebrew 4.x.x".
+STEP 4 — Run the controller (Terminal 1)
+────────────────────────────────────────
 
+  make run
 
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.2: Install Docker Desktop
-────────────────────────────────────────────────────────────────────────────────
+STEP 5 — Submit & watch workflows (Terminal 2)
+──────────────────────────────────────────────
 
-Option A — Download from website:
-    Go to https://www.docker.com/products/docker-desktop/
-    Download the Mac version (Apple Silicon if you have M1/M2/M3/M4).
-    Open the .dmg file, drag Docker to Applications.
-    Open Docker from Applications.
-    Wait for it to start (whale icon in menu bar turns steady).
+  go run ./cmd/kwf submit test1-simple-linear.yaml
+  go run ./cmd/kwf status test-linear-pipeline
+  go run ./cmd/kwf list
+  kubectl get pods --watch
 
-Option B — Install via brew:
+STEP 6 — Web dashboard (Terminal 3, optional)
+─────────────────────────────────────────────
 
-    brew install --cask docker
+  cd ui && npm install && npm run build && cd ..
+  go run ./cmd/kwf ui
+  # Open http://localhost:8080
 
-Then open Docker Desktop from Applications and wait for it to start.
+STEP 7 — Full stack with gRPC microservices (optional)
+──────────────────────────────────────────────────────
 
-Verify it works:
+  docker compose up -d --build
 
-    docker --version
-    docker compose version
+  INFERENCE_GRPC_ADDR=localhost:50051 \
+  OPTIMIZER_GRPC_ADDR=localhost:50052 \
+  STATEDB_CONNECTION_STR="postgres://adaptive:adaptive-dev-password@localhost:5432/adaptiveworkflows?sslmode=disable" \
+  make run
 
-You should see version numbers. If docker says "Cannot connect to the Docker
-daemon", make sure Docker Desktop is running (check the whale icon in the
-menu bar).
-
-IMPORTANT: Docker Desktop must be RUNNING whenever you use this project.
-
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.3: Install Go (the programming language)
-────────────────────────────────────────────────────────────────────────────────
-
-    brew install go
-
-Verify:
-
-    go version
-
-You should see "go1.23.x" or similar.
-
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.4: Install kubectl (Kubernetes command-line tool)
-────────────────────────────────────────────────────────────────────────────────
-
-    brew install kubectl
-
-Verify:
-
-    kubectl version --client
-
-You should see a version number.
-
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.5: Install Kind (Kubernetes IN Docker)
-────────────────────────────────────────────────────────────────────────────────
-
-Kind runs a full Kubernetes cluster inside Docker containers on your laptop.
-No cloud account needed.
-
-    brew install kind
-
-Verify:
-
-    kind version
-
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.6: Install Node.js (for the React web dashboard)
-────────────────────────────────────────────────────────────────────────────────
-
-    brew install node
-
-Verify:
-
-    node --version
-    npm --version
-
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 1.7: Install Git
-────────────────────────────────────────────────────────────────────────────────
-
-    brew install git
-
-Verify:
-
-    git --version
+CLEANUP
+───────
+  kubectl delete adaptiveworkflows --all
+  kind delete cluster --name adaptive-test
+  docker compose down
 
 
 ================================================================================
-PART 2: GET THE CODE
+TUTORIAL B: WINDOWS SETUP
 ================================================================================
 
-    cd ~/Desktop
-    git clone https://github.com/Aman-Git-hala/k8s-adaptive-workflows.git
-    cd k8s-adaptive-workflows
+STEP 1 — Install prerequisites (one-time)
+──────────────────────────────────────────
 
-From now on, every command should be run from inside this folder.
-If you ever close Terminal, re-open it and run:
+  a) Install Docker Desktop:
+     https://www.docker.com/products/docker-desktop/
+     Download Windows version. Run installer. Restart if asked.
+     Enable WSL 2 when prompted.
 
-    cd ~/Desktop/k8s-adaptive-workflows
+  b) Install WSL 2 (Windows Subsystem for Linux):
+     Open PowerShell as Administrator:
+       wsl --install
+     Restart your PC. Set up Ubuntu username/password when prompted.
 
+  c) Open Ubuntu (from Start menu) and install tools:
+       sudo apt update && sudo apt upgrade -y
+       sudo apt install -y git curl build-essential
 
-================================================================================
-PART 3: CREATE A LOCAL KUBERNETES CLUSTER
-================================================================================
+  d) Install Go:
+       wget https://go.dev/dl/go1.24.2.linux-amd64.tar.gz
+       sudo tar -C /usr/local -xzf go1.24.2.linux-amd64.tar.gz
+       echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
+       source ~/.bashrc
+       go version
 
-This creates a lightweight Kubernetes cluster on your laptop using Docker.
+  e) Install kubectl:
+       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+       sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+       kubectl version --client
 
-────────────────────────────────────────────────────────────────────────────────
-STEP 3.1: Create the Kind cluster
-────────────────────────────────────────────────────────────────────────────────
+  f) Install Kind:
+       go install sigs.k8s.io/kind@latest
+       kind version
 
-    kind create cluster --name adaptive-test
+  g) Install Node.js:
+       curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+       sudo apt install -y nodejs
+       node --version
 
-This takes 1-3 minutes. Wait for "Have a nice day!" message.
+  NOTE: Make sure Docker Desktop is running with WSL 2 integration enabled.
+        (Docker Desktop → Settings → Resources → WSL Integration → Enable)
 
-If you see "node(s) already exist", that means you already have one:
+STEP 2 — Get the code (inside Ubuntu/WSL terminal)
+───────────────────────────────────────────────────
 
-    kind delete cluster --name adaptive-test
-    kind create cluster --name adaptive-test
+  git clone https://github.com/Aman-Git-hala/k8s-adaptive-workflows.git
+  cd k8s-adaptive-workflows
 
-Verify the cluster is running:
+STEP 3 — Create cluster & install CRD
+──────────────────────────────────────
 
-    kubectl get nodes
+  kind create cluster --name adaptive-test
+  make manifests && make install
 
-You should see:
-    NAME                          STATUS   ROLES           AGE   VERSION
-    adaptive-test-control-plane   Ready    control-plane   ...   v1.35.0
+STEP 4 — Run the controller (WSL Terminal 1)
+────────────────────────────────────────────
 
-────────────────────────────────────────────────────────────────────────────────
-STEP 3.2: Install the Custom Resource Definition (CRD) into the cluster
-────────────────────────────────────────────────────────────────────────────────
+  make run
 
-This tells Kubernetes about our new "AdaptiveWorkflow" resource type:
+STEP 5 — Submit & watch workflows (WSL Terminal 2)
+──────────────────────────────────────────────────
 
-    make manifests
-    make install
+  go run ./cmd/kwf submit test1-simple-linear.yaml
+  go run ./cmd/kwf status test-linear-pipeline
+  go run ./cmd/kwf list
+  kubectl get pods --watch
 
-Verify:
+STEP 6 — Web dashboard (WSL Terminal 3, optional)
+─────────────────────────────────────────────────
 
-    kubectl get crd
+  cd ui && npm install && npm run build && cd ..
+  go run ./cmd/kwf ui
+  # Open http://localhost:8080 in your Windows browser
 
-You should see:
-    adaptiveworkflows.v1.wannabe.dev   ...
+STEP 7 — Full stack with gRPC microservices (optional)
+──────────────────────────────────────────────────────
 
+  docker compose up -d --build
 
-================================================================================
-PART 4 (OPTION A): RUN IN MINIMAL MODE — Go only, no microservices
-================================================================================
+  INFERENCE_GRPC_ADDR=localhost:50051 \
+  OPTIMIZER_GRPC_ADDR=localhost:50052 \
+  STATEDB_CONNECTION_STR="postgres://adaptive:adaptive-dev-password@localhost:5432/adaptiveworkflows?sslmode=disable" \
+  make run
 
-This is the simplest way to run the project. Uses in-process Go
-implementations instead of the Python/C++ gRPC services.
-
-No Docker Compose needed. No PostgreSQL. Just Go + Kind.
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4A.1: Start the controller
-────────────────────────────────────────────────────────────────────────────────
-
-    make run
-
-You will see log output like:
-    INFO    setup   Using in-process BaselineEngine (no INFERENCE_GRPC_ADDR set)
-    INFO    setup   Using in-process GreedyOptimizer (no OPTIMIZER_GRPC_ADDR set)
-    INFO    setup   No STATEDB_CONNECTION_STR set, using no-op StateDB
-    INFO    setup   starting manager
-    ...
-    INFO    Starting Controller ...
-    INFO    Starting workers ...
-
-The controller is now running. LEAVE THIS TERMINAL OPEN.
-It will keep running and print logs as workflows execute.
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4A.2: Open a SECOND terminal and submit a test workflow
-────────────────────────────────────────────────────────────────────────────────
-
-Open a new Terminal window (Cmd+N) and run:
-
-    cd ~/Desktop/k8s-adaptive-workflows
-
-Now submit a simple test workflow:
-
-    go run ./cmd/kwf submit test1-simple-linear.yaml
-
-You should see:
-    ✓ Workflow "test-linear-pipeline" submitted in namespace "default"
-      Tasks: 3
-      Goal:  MinimizeTime
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4A.3: Watch the workflow execute
-────────────────────────────────────────────────────────────────────────────────
-
-Check status:
-
-    go run ./cmd/kwf status test-linear-pipeline
-
-Check the pods that were created:
-
-    kubectl get pods
-
-You will see pods being created, running, and completing:
-    test-linear-pipeline-ingest-data   0/1   Completed   0   20s
-    test-linear-pipeline-clean-data    0/1   Completed   0   10s
-    test-linear-pipeline-train-model   1/1   Running     0   5s
-
-Re-run the status command periodically to see progress.
-Once all tasks show "Succeeded", the workflow phase becomes "Completed".
-
-To list all workflows:
-
-    go run ./cmd/kwf list
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4A.4: Try other test files
-────────────────────────────────────────────────────────────────────────────────
-
-There are 6 test workflow files included:
-
-    go run ./cmd/kwf submit test1-simple-linear.yaml
-    go run ./cmd/kwf submit test2-parallel-fanout.yaml
-    go run ./cmd/kwf submit test3-map-reduce.yaml
-    go run ./cmd/kwf submit test4-heavy-ml.yaml
-    go run ./cmd/kwf submit test5-complex-diamond.yaml
-    go run ./cmd/kwf submit test6-massive-dag.yaml       (52 tasks!)
-
-After submitting each, watch with:
-    go run ./cmd/kwf list
-    kubectl get pods --watch
-
-Press Ctrl+C to stop watching.
-
-NOTE: Between different test runs, if you want a clean slate:
-    kubectl delete adaptiveworkflows --all
-    kubectl delete pods --all
+CLEANUP
+───────
+  kubectl delete adaptiveworkflows --all
+  kind delete cluster --name adaptive-test
+  docker compose down
 
 
 ================================================================================
-PART 4 (OPTION B): RUN WITH FULL MICROSERVICES (Python + C++ + PostgreSQL)
+QUICK REFERENCE
 ================================================================================
 
-This mode uses all three gRPC microservices for the real ML pipeline.
-Requires Docker and takes more RAM.
+  CLI commands:
+    go run ./cmd/kwf submit <file.yaml>     Submit a workflow
+    go run ./cmd/kwf status <name>          Check status
+    go run ./cmd/kwf list                   List all workflows
+    go run ./cmd/kwf ui                     Start web dashboard
+
+  Test files included:
+    test1-simple-linear.yaml      3 tasks: A → B → C
+    test2-parallel-fanout.yaml    Fan-out: A → {B, C, D}
+    test3-map-reduce.yaml         Map-reduce: {A, B, C} → D
+    test4-heavy-ml.yaml           ML pipeline with resource hints
+    test5-complex-diamond.yaml    Diamond: A → {B, C} → D
+    test6-massive-dag.yaml        52-task stress test with retry loops
+
+  Run tests:
+    make test                     Unit tests (no cluster needed)
+    make lint                     Static analysis
 
-────────────────────────────────────────────────────────────────────────────────
-STEP 4B.1: Start the microservices stack
-────────────────────────────────────────────────────────────────────────────────
-
-Make sure Docker Desktop is running, then:
-
-    docker compose up -d --build
-
-This will:
-  - Start PostgreSQL on port 5432 (auto-creates the schema)
-  - Build and start the Python Inference Engine on port 50051
-  - Build and start the C++ Optimizer on port 50052
-
-First run takes 5-15 minutes (downloading/compiling). Subsequent runs are fast.
-
-Check that everything is running:
-
-    docker compose ps
-
-All 3 services should show "Up" / "running".
-
-Check logs if something looks wrong:
-
-    docker compose logs -f
-
-Press Ctrl+C to stop following logs.
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4B.2: Start the controller with gRPC endpoints
-────────────────────────────────────────────────────────────────────────────────
-
-In a fresh terminal:
-
-    cd ~/Desktop/k8s-adaptive-workflows
-
-    INFERENCE_GRPC_ADDR=localhost:50051 \
-    OPTIMIZER_GRPC_ADDR=localhost:50052 \
-    STATEDB_CONNECTION_STR="postgres://adaptive:adaptive-dev-password@localhost:5432/adaptiveworkflows?sslmode=disable" \
-    make run
-
-You should see:
-    INFO    setup   Using gRPC Inference Engine   addr=localhost:50051
-    INFO    setup   Using gRPC Optimizer           addr=localhost:50052
-    INFO    setup   Connecting to StateDB (PostgreSQL)
-    INFO    setup   starting manager
-
-LEAVE THIS TERMINAL OPEN.
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4B.3: Submit workflows (same as Option A)
-────────────────────────────────────────────────────────────────────────────────
-
-Open yet another terminal:
-
-    cd ~/Desktop/k8s-adaptive-workflows
-    go run ./cmd/kwf submit test4-heavy-ml.yaml
-    go run ./cmd/kwf status heavy-ml-pipeline
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 4B.4: Stop the microservices when done
-────────────────────────────────────────────────────────────────────────────────
-
-    docker compose down
-
-
-================================================================================
-PART 5: WEB DASHBOARD
-================================================================================
-
-The web dashboard lets you visually build workflows and monitor them in a browser.
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 5.1: Build the React frontend (one-time)
-────────────────────────────────────────────────────────────────────────────────
-
-    cd ui
-    npm install
-    npm run build
-    cd ..
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 5.2: Start the dashboard server
-────────────────────────────────────────────────────────────────────────────────
-
-Make sure the controller is already running (from Part 4A or 4B), then in a
-new terminal:
-
-    cd ~/Desktop/k8s-adaptive-workflows
-    go run ./cmd/kwf ui
-
-You will see:
-    Starting web dashboard at http://localhost:8080
-
-────────────────────────────────────────────────────────────────────────────────
-STEP 5.3: Open the dashboard
-────────────────────────────────────────────────────────────────────────────────
-
-Open your browser and go to:
-
-    http://localhost:8080
-
-You will see:
-  - "Create Workflow" section with a Visual Builder and Raw YAML tabs
-  - Visual Builder lets you add tasks, set images, commands, dependencies
-  - "Deploy to Cluster" button submits the workflow
-  - "Compare Algorithms" button opens a Tetris-like simulation comparing
-    naive vs. adaptive scheduling
-  - Below the form, all running/completed workflows are shown with live
-    status updates (polls every 3 seconds)
-
-To test:
-  1. Click "Deploy to Cluster" with the default workflow
-  2. Watch the workflow appear below with task progress badges
-  3. Click "Compare Algorithms" to see the 2D Tetris visualization
-
-
-================================================================================
-PART 6: KWF CLI REFERENCE
-================================================================================
-
-The kwf CLI tool works like a mini-kubectl for AdaptiveWorkflows.
-
-Build it once (optional, for faster execution):
-
-    go build -o kwf ./cmd/kwf
-
-Then use ./kwf instead of "go run ./cmd/kwf".
-
-COMMANDS:
-
-  Submit a workflow:
-    go run ./cmd/kwf submit <file.yaml>
-    go run ./cmd/kwf submit test1-simple-linear.yaml
-
-  Check workflow status:
-    go run ./cmd/kwf status <workflow-name>
-    go run ./cmd/kwf status test-linear-pipeline
-
-  List all workflows:
-    go run ./cmd/kwf list
-    go run ./cmd/kwf list --all-namespaces
-
-  Start web dashboard:
-    go run ./cmd/kwf ui
-
-  Use a different namespace:
-    go run ./cmd/kwf -n my-namespace submit test1-simple-linear.yaml
-
-  Use a different kubeconfig:
-    go run ./cmd/kwf --kubeconfig /path/to/kubeconfig submit test1-simple-linear.yaml
-
-
-================================================================================
-PART 7: RUNNING TESTS
-================================================================================
-
-────────────────────────────────────────────────────────────────────────────────
-Unit tests (does NOT need a running cluster or Docker)
-────────────────────────────────────────────────────────────────────────────────
-
-    make test
-
-This runs the Go unit tests using envtest (a lightweight embedded test
-API server). You should see:
-
-    ok   github.com/.../internal/controller   7.6s   coverage: 73.2% of statements
-
-────────────────────────────────────────────────────────────────────────────────
-Lint check
-────────────────────────────────────────────────────────────────────────────────
-
-    make lint
-
-Should show: "0 issues."
-
-
-================================================================================
-PART 8: UNDERSTANDING THE YAML TEST FILES
-================================================================================
-
-  test1-simple-linear.yaml     — 3 tasks in a straight line: A → B → C
-  test2-parallel-fanout.yaml   — 1 task fans out to 3 parallel tasks
-  test3-map-reduce.yaml        — 3 parallel tasks merge into 1
-  test4-heavy-ml.yaml          — Multi-stage ML pipeline with resource hints
-  test5-complex-diamond.yaml   — Classic diamond: A → {B,C} → D
-  test6-massive-dag.yaml       — 52 tasks with retry loops and complex deps
-
-Example YAML structure (what users write):
-
-    apiVersion: v1.wannabe.dev/v1
-    kind: AdaptiveWorkflow
-    metadata:
-      name: my-workflow
-    spec:
-      optimizationGoal: MinimizeTime
-      maxResources:
-        cpu: "2"
-        memory: "1Gi"
-      tasks:
-        - name: task-a
-          image: busybox
-          command: ["echo", "hello"]
-        - name: task-b
-          image: busybox
-          command: ["echo", "world"]
-          dependencies:
-            - task-a
-
-Key fields:
-  name         — task identifier (must be unique within the workflow)
-  image        — Docker image to run (busybox, python:3.12-slim, etc.)
-  command      — shell command to execute inside the container
-  dependencies — list of task names that must finish before this one starts
-  baseResources — optional CPU/memory hint for the inference engine
-
-
-================================================================================
-PART 9: HOW THE SYSTEM WORKS (EVALUATION TALKING POINTS)
-================================================================================
-
-1. USER writes a YAML file defining a workflow (tasks + dependencies)
-
-2. USER submits it with: kwf submit workflow.yaml
-
-3. The Go CONTROLLER watches for new AdaptiveWorkflow resources
-
-4. On each reconciliation cycle (every 10 seconds), the controller:
-   a. Reads the current state of all tasks
-   b. Calls the INFERENCE ENGINE → "How much CPU/RAM will each task need?"
-      - Uses ONNX ML model trained on historical data
-      - Falls back to user hints or defaults if no history
-   c. Calls the OPTIMIZER → "Which tasks should I launch right now?"
-      - Checks DAG dependencies (only launch tasks whose deps are done)
-      - Checks resource budget (never exceed maxResources)
-      - Greedy bin-packing: fit as many ready tasks as possible
-   d. Creates Kubernetes PODS for each scheduled task
-   e. Updates the workflow status
-
-5. When a task finishes, the controller:
-   - Records actual CPU/RAM/duration to PostgreSQL (feedback loop)
-   - Checks if the next wave of tasks can be launched
-   - Checks if the whole workflow is done
-
-6. The LEARNING LOOP:
-   Task completes → metrics stored in PostgreSQL
-   → Python reads history → trains better ML model
-   → next workflow gets better predictions → fewer resource wastes
-
-WHY IS THIS BETTER THAN ARGO / PLAIN KUBERNETES?
-  - Argo launches ALL independent tasks at once → can exceed cluster memory
-    → pods get evicted → chaos
-  - Our operator predicts resource needs and packs tasks like Tetris
-  - Tasks that would overflow the memory limit are delayed to the next cycle
-  - Result: same throughput, zero evictions, learned resource allocation
-
-
-================================================================================
-PART 10: TROUBLESHOOTING
-================================================================================
-
-PROBLEM: "make run" shows "connection refused" errors
-  CAUSE:  The Kind cluster is not running or CRDs are not installed
-  FIX:    
-    kubectl get nodes          (should show a Ready node)
-    make install               (installs the CRD)
-    make run                   (try again)
-
-PROBLEM: "kind create cluster" says "node(s) already exist"
-  FIX:
-    kind delete cluster --name adaptive-test
-    kind create cluster --name adaptive-test
-
-PROBLEM: "docker compose up" fails or services won't start
-  CAUSE:  Docker Desktop is not running
-  FIX:    Open Docker Desktop from Applications, wait for whale icon to steady
-  THEN:   docker compose up -d --build
-
-PROBLEM: Pods are stuck in "Pending"
-  CAUSE:  Cluster doesn't have enough resources or image can't be pulled
-  FIX:    
-    kubectl describe pod <pod-name>    (look at the Events section)
-    kubectl get events --sort-by=.lastTimestamp
-
-PROBLEM: "go: command not found"
-  FIX:    
-    brew install go
-    export PATH=$PATH:/usr/local/go/bin
-    (or restart Terminal)
-
-PROBLEM: "kubectl: command not found"
-  FIX:    brew install kubectl
-
-PROBLEM: Workflow is stuck in "Running" forever
-  CAUSE:  A task's dependencies may have failed, or the pod is stuck
-  FIX:    
-    go run ./cmd/kwf status <workflow-name>     (check which tasks are stuck)
-    kubectl get pods                             (check pod states)
-    kubectl logs <pod-name>                      (check task output)
-
-PROBLEM: Web dashboard shows "No workflows running"
-  CAUSE:  Controller not running or no workflows submitted
-  FIX:    Make sure controller is running (make run in another terminal)
-
-PROBLEM: "make test" fails
-  FIX:    It downloads test binaries on first run. Wait for it.
-          If it keeps failing: make test 2>&1 | tail -20    (check the error)
-
-
-================================================================================
-PART 11: CLEAN UP (AFTER EVALUATION)
-================================================================================
-
-Delete all workflows:
-    kubectl delete adaptiveworkflows --all
-
-Delete all pods:
-    kubectl delete pods --all
-
-Stop the controller:
-    Press Ctrl+C in the terminal running "make run"
-
-Stop the microservices:
-    docker compose down
-
-Delete the Kind cluster:
-    kind delete cluster --name adaptive-test
-
-Stop Docker Desktop:
-    Click whale icon → Quit Docker Desktop
-
-
-================================================================================
-PART 12: QUICK DEMO SCRIPT (5-MINUTE EVALUATION WALKTHROUGH)
-================================================================================
-
-This is a copy-paste demo you can run in sequence.
-
-TERMINAL 1 (Controller):
-    cd ~/Desktop/k8s-adaptive-workflows
-    kind create cluster --name adaptive-test       # skip if already exists
-    make install
-    make run
-
-TERMINAL 2 (Workflow Operations):
-    cd ~/Desktop/k8s-adaptive-workflows
-
-    # Submit a simple workflow
-    go run ./cmd/kwf submit test1-simple-linear.yaml
-
-    # Watch it run
-    go run ./cmd/kwf status test-linear-pipeline
-    kubectl get pods --watch
-    # (wait for Completed, then Ctrl+C)
-
-    # Submit the complex diamond
-    go run ./cmd/kwf submit test5-complex-diamond.yaml
-    go run ./cmd/kwf list
-
-    # Submit the massive 52-task DAG
-    go run ./cmd/kwf submit test6-massive-dag.yaml
-    go run ./cmd/kwf status massive-52-task-dag
-
-    # Show all running pods (should see many pods being scheduled in waves)
-    kubectl get pods
-
-TERMINAL 3 (Web Dashboard):
-    cd ~/Desktop/k8s-adaptive-workflows
-    cd ui && npm install && npm run build && cd ..
-    go run ./cmd/kwf ui
-    # Open http://localhost:8080 in browser
-    # Click "Compare Algorithms" to show the Tetris visualization
-    # Watch live workflow status updates in the UI
-
-
-================================================================================
-PART 13: PROJECT FILE STRUCTURE (FOR REFERENCE)
-================================================================================
-
-k8s-adaptive-workflows/
-├── api/v1/                          CRD type definitions (Go)
-│   ├── adaptiveworkflow_types.go    The custom resource schema
-│   ├── groupversion_info.go         API group registration
-│   └── zz_generated.deepcopy.go    Auto-generated (DO NOT EDIT)
-│
-├── cmd/
-│   ├── main.go                      Controller manager entry point
-│   └── kwf/
-│       ├── main.go                  kwf CLI (submit, status, list)
-│       └── ui.go                    Web dashboard HTTP server
-│
-├── internal/
-│   ├── controller/
-│   │   └── adaptiveworkflow_controller.go   THE MAIN RECONCILE LOOP
-│   ├── inference/
-│   │   ├── inference.go             Engine interface
-│   │   └── baseline.go             In-process fallback (uses BaseResources)
-│   ├── optimizer/
-│   │   ├── optimizer.go             Optimizer interface + types
-│   │   └── greedy.go               In-process greedy scheduler
-│   ├── grpcclient/
-│   │   ├── inference_client.go      gRPC bridge → Python server
-│   │   └── optimizer_client.go      gRPC bridge → C++ server
-│   └── statedb/
-│       ├── client.go                PostgreSQL + NoOp implementations
-│       └── schema.sql               Database table definition
-│
-├── inference-engine/                Python ML microservice
-│   ├── server.py                    gRPC server with ONNX inference
-│   ├── train_model.py               Trains the ML model
-│   ├── Dockerfile                   Container build
-│   └── requirements.txt             Python dependencies
-│
-├── optimizer-service/               C++ Optimizer microservice
-│   ├── src/main.cpp                 gRPC server entry point
-│   ├── src/greedy_optimizer.cpp     Core scheduling algorithm
-│   ├── src/greedy_optimizer.h       Header file
-│   ├── CMakeLists.txt               Build configuration
-│   └── Dockerfile                   Container build
-│
-├── proto/                           gRPC contract definitions
-│   ├── inference.proto              Python engine contract
-│   └── optimizer.proto              C++ optimizer contract
-│
-├── ui/                              React web dashboard
-│   ├── src/App.tsx                  Main UI component
-│   └── src/index.css                Styles
-│
-├── config/                          Kubernetes manifests (mostly generated)
-│   ├── crd/bases/                   Generated CRD YAML
-│   ├── rbac/                        Generated RBAC permissions
-│   └── samples/                     Example workflow YAML
-│
-├── test1-simple-linear.yaml         Test: A → B → C
-├── test2-parallel-fanout.yaml       Test: A → {B, C, D}
-├── test3-map-reduce.yaml            Test: {A, B, C} → D
-├── test4-heavy-ml.yaml              Test: ML pipeline with resources
-├── test5-complex-diamond.yaml       Test: A → {B, C} → D
-├── test6-massive-dag.yaml           Test: 52-task monster DAG
-│
-├── docker-compose.yml               Local dev stack (Postgres + Python + C++)
-├── Dockerfile                       Controller container build
-├── Makefile                         Build automation
-├── go.mod / go.sum                  Go dependencies
-└── documentation.md                 Full technical documentation
-
-
-================================================================================
-END OF USER MANUAL
 ================================================================================

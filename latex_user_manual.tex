@@ -1,0 +1,393 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% ── Colors ────────────────────────────────────────────────────────────────────
+\definecolor{codeblue}{HTML}{2563EB}
+\definecolor{codebg}{HTML}{F1F5F9}
+\definecolor{accent}{HTML}{7C3AED}
+\definecolor{darkbg}{HTML}{1E293B}
+
+% ── Code listing style ────────────────────────────────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{gray!40},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  showstringspaces=false,
+  columns=fullflexible,
+  xleftmargin=1em,
+  framexleftmargin=0.5em,
+}
+
+% ── Header / Footer ──────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textsl{K8s Adaptive Workflows}}
+\fancyhead[R]{\textsl{User Manual}}
+\fancyfoot[C]{\thepage}
+
+% ── Title formatting ─────────────────────────────────────────────────────────
+\titleformat{\section}{\Large\bfseries\color{accent}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries}{}{0em}{}
+
+% ── Tip/Warning boxes ────────────────────────────────────────────────────────
+\newtcolorbox{tipbox}{colback=blue!5,colframe=codeblue,title=\textbf{Tip},fonttitle=\bfseries}
+\newtcolorbox{warnbox}{colback=red!5,colframe=red!70,title=\textbf{Warning},fonttitle=\bfseries}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\Huge\bfseries\color{accent} K8s Adaptive Workflows}\\[0.5cm]
+{\LARGE User Manual}\\[1.5cm]
+{\large A Kubernetes Operator for Intelligent DAG Scheduling}\\[0.5cm]
+{\large ML-Predicted Resources $\cdot$ Greedy Bin-Pack Optimizer $\cdot$ gRPC Microservices}\\[3cm]
+{\large Version 1.0}\\[0.5cm]
+{\large\today}\\[2cm]
+{\normalsize GitHub: \url{https://github.com/Aman-Git-hala/k8s-adaptive-workflows}}
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Project Overview}
+% ══════════════════════════════════════════════════════════════════════════════
+
+K8s Adaptive Workflows is a \textbf{Kubernetes Operator} that executes DAG-based task pipelines with intelligent resource management. Unlike standard job runners (Argo Workflows, plain Kubernetes Jobs) that blindly launch all independent tasks simultaneously, this operator:
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Predicts} resource requirements using an ML inference engine (ONNX model trained on historical data)
+  \item \textbf{Optimizes} scheduling using a greedy bin-packing algorithm (fits tasks within resource limits like Tetris)
+  \item \textbf{Learns} from every execution by recording actual metrics to PostgreSQL
+\end{itemize}
+
+\subsection{Architecture}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Component} & \textbf{Language} & \textbf{Role} \\
+\hline
+Go Controller & Go & Kubernetes reconciliation loop \\
+Inference Engine & Python & ML resource prediction (gRPC :50051) \\
+Optimizer Service & C++ & DAG scheduling decisions (gRPC :50052) \\
+State Database & PostgreSQL & Historical execution metrics (:5432) \\
+Web Dashboard & React/TypeScript & Visual workflow builder \& monitor \\
+kwf CLI & Go & Command-line interface \\
+\hline
+\end{tabular}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{macOS Setup Guide}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Step 1: Install Prerequisites}
+
+Open \textbf{Terminal} (Cmd+Space $\to$ type ``Terminal'' $\to$ Enter).
+
+\begin{lstlisting}
+# Install Homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install all required tools
+brew install go kubectl kind node git
+brew install --cask docker
+\end{lstlisting}
+
+Open \textbf{Docker Desktop} from Applications. Wait for the whale icon in the menu bar to become steady.
+
+\begin{tipbox}
+If Homebrew tells you to run extra commands to add \texttt{brew} to your PATH, follow those instructions before continuing.
+\end{tipbox}
+
+\subsection{Step 2: Clone the Repository}
+
+\begin{lstlisting}
+git clone https://github.com/Aman-Git-hala/k8s-adaptive-workflows.git
+cd k8s-adaptive-workflows
+\end{lstlisting}
+
+\subsection{Step 3: Create a Kubernetes Cluster}
+
+\begin{lstlisting}
+kind create cluster --name adaptive-test
+make manifests && make install
+\end{lstlisting}
+
+Verify:
+\begin{lstlisting}
+kubectl get nodes
+kubectl get crd
+\end{lstlisting}
+
+\subsection{Step 4: Run the Controller}
+
+\begin{lstlisting}
+make run
+\end{lstlisting}
+
+Leave this terminal open. Open a \textbf{second} terminal for the next steps.
+
+\subsection{Step 5: Submit a Workflow}
+
+\begin{lstlisting}
+cd k8s-adaptive-workflows
+go run ./cmd/kwf submit test1-simple-linear.yaml
+go run ./cmd/kwf status test-linear-pipeline
+go run ./cmd/kwf list
+kubectl get pods --watch
+\end{lstlisting}
+
+\subsection{Step 6: Web Dashboard (Optional)}
+
+In a \textbf{third} terminal:
+\begin{lstlisting}
+cd k8s-adaptive-workflows/ui && npm install && npm run build && cd ..
+go run ./cmd/kwf ui
+\end{lstlisting}
+
+Open \url{http://localhost:8080} in your browser.
+
+\subsection{Step 7: Full Stack with Microservices (Optional)}
+
+\begin{lstlisting}
+docker compose up -d --build
+
+INFERENCE_GRPC_ADDR=localhost:50051 \
+OPTIMIZER_GRPC_ADDR=localhost:50052 \
+STATEDB_CONNECTION_STR="postgres://adaptive:adaptive-dev-password@localhost:5432/adaptiveworkflows?sslmode=disable" \
+make run
+\end{lstlisting}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Windows Setup Guide}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Step 1: Install Docker Desktop}
+
+Download from \url{https://www.docker.com/products/docker-desktop/}. Run the installer. \textbf{Enable WSL 2} when prompted. Restart your PC.
+
+\subsection{Step 2: Install WSL 2}
+
+Open \textbf{PowerShell as Administrator}:
+\begin{lstlisting}
+wsl --install
+\end{lstlisting}
+
+Restart your PC. When Ubuntu opens, create a username and password.
+
+\begin{warnbox}
+All remaining commands must be run inside the \textbf{Ubuntu / WSL} terminal, not PowerShell. Open it from the Start menu.
+\end{warnbox}
+
+\subsection{Step 3: Install Tools (inside WSL)}
+
+\begin{lstlisting}
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl build-essential
+
+# Go
+wget https://go.dev/dl/go1.24.2.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.24.2.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
+source ~/.bashrc
+
+# kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s \
+  https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Kind
+go install sigs.k8s.io/kind@latest
+
+# Node.js
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+\end{lstlisting}
+
+\begin{tipbox}
+Ensure Docker Desktop has WSL integration enabled: Docker Desktop $\to$ Settings $\to$ Resources $\to$ WSL Integration $\to$ Enable for your Ubuntu distro.
+\end{tipbox}
+
+\subsection{Step 4: Clone, Build, and Run}
+
+Follow the \textbf{same steps as macOS} (Steps 2--7 from Section 2), but inside the WSL terminal. The commands are identical.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{CLI Reference}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Command} & \textbf{Description} \\
+\hline
+\texttt{kwf submit <file.yaml>} & Submit/update a workflow \\
+\texttt{kwf status <name>} & Show per-task status \\
+\texttt{kwf list} & List all workflows \\
+\texttt{kwf list -A} & List across all namespaces \\
+\texttt{kwf ui} & Start the web dashboard (:8080) \\
+\texttt{kwf -n <ns> submit f.yaml} & Target a specific namespace \\
+\hline
+\end{tabular}
+\end{center}
+
+Run via \texttt{go run ./cmd/kwf <command>} or build once with \texttt{go build -o kwf ./cmd/kwf}.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Test Workflow Files}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{File} & \textbf{DAG Shape} & \textbf{Tasks} \\
+\hline
+\texttt{test1-simple-linear.yaml} & $A \to B \to C$ & 3 \\
+\texttt{test2-parallel-fanout.yaml} & $A \to \{B, C, D\}$ & 4 \\
+\texttt{test3-map-reduce.yaml} & $\{A, B, C\} \to D$ & 4 \\
+\texttt{test4-heavy-ml.yaml} & Multi-stage ML pipeline & 6 \\
+\texttt{test5-complex-diamond.yaml} & $A \to \{B, C\} \to D$ & 4 \\
+\texttt{test6-massive-dag.yaml} & Complex with retry loops & 52 \\
+\hline
+\end{tabular}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{YAML Manifest Format}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{lstlisting}
+apiVersion: v1.wannabe.dev/v1
+kind: AdaptiveWorkflow
+metadata:
+  name: my-workflow
+spec:
+  optimizationGoal: MinimizeTime    # or MinimizeCost
+  maxResources:
+    cpu: "2"
+    memory: "1Gi"
+  tasks:
+    - name: fetch-data
+      image: busybox
+      command: ["sh", "-c", "echo hello && sleep 5"]
+    - name: process-data
+      image: python:3.12-slim
+      command: ["python", "-c", "print('done')"]
+      dependencies:
+        - fetch-data
+      baseResources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+\end{lstlisting}
+
+\textbf{Key fields:}
+\begin{itemize}[leftmargin=2em]
+  \item \texttt{name} --- unique task identifier
+  \item \texttt{image} --- Docker image to run
+  \item \texttt{command} --- shell command for the container
+  \item \texttt{dependencies} --- tasks that must complete first (defines the DAG)
+  \item \texttt{baseResources} --- optional CPU/memory hint for the inference engine
+  \item \texttt{maxResources} --- hard ceiling on concurrent resource usage
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{How It Works}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{enumerate}[leftmargin=2em]
+  \item User submits an \texttt{AdaptiveWorkflow} YAML to the cluster.
+  \item The Go controller detects the new resource and starts reconciling.
+  \item \textbf{Inference Engine} predicts CPU/memory/duration per task:
+    \begin{itemize}
+      \item Priority: ONNX ML model $\to$ historical averages $\to$ user hints $\to$ defaults
+    \end{itemize}
+  \item \textbf{Optimizer} decides which ready tasks to launch:
+    \begin{itemize}
+      \item Checks DAG dependencies (only launch tasks whose deps succeeded)
+      \item Checks resource budget (never exceed \texttt{maxResources})
+      \item Greedy bin-packing: fit as many tasks as possible within limits
+    \end{itemize}
+  \item Controller creates Kubernetes \textbf{Pods} for scheduled tasks.
+  \item On task completion, metrics are recorded to \textbf{PostgreSQL}.
+  \item Reconcile loop repeats every 10 seconds until all tasks finish.
+\end{enumerate}
+
+\begin{tipbox}
+\textbf{Why is this better than Argo?} Argo launches all independent tasks at once, which can exceed cluster memory and cause pod evictions. Our operator predicts needs and schedules within limits --- same throughput, zero evictions.
+\end{tipbox}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Environment Variables}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Variable} & \textbf{Default} & \textbf{Effect} \\
+\hline
+\texttt{INFERENCE\_GRPC\_ADDR} & \textit{(unset)} & Python gRPC server address \\
+\texttt{OPTIMIZER\_GRPC\_ADDR} & \textit{(unset)} & C++ gRPC server address \\
+\texttt{STATEDB\_CONNECTION\_STR} & \textit{(unset)} & PostgreSQL connection string \\
+\hline
+\end{tabular}
+\end{center}
+
+When unset, the controller uses in-process Go fallbacks (no external services needed).
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Troubleshooting}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{center}
+\begin{tabular}{|p{5cm}|p{8cm}|}
+\hline
+\textbf{Problem} & \textbf{Fix} \\
+\hline
+``connection refused'' on \texttt{make run} & Run \texttt{kubectl get nodes} to check cluster. Run \texttt{make install} to install CRDs. \\
+\hline
+``node(s) already exist'' on \texttt{kind create} & \texttt{kind delete cluster --name adaptive-test} then recreate. \\
+\hline
+\texttt{docker compose} fails & Ensure Docker Desktop is running. \\
+\hline
+Pods stuck in Pending & \texttt{kubectl describe pod <name>} --- check Events. \\
+\hline
+\texttt{go: command not found} & Install Go. Restart terminal. \\
+\hline
+\end{tabular}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Cleanup}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{lstlisting}
+kubectl delete adaptiveworkflows --all
+kind delete cluster --name adaptive-test
+docker compose down     # if using microservices
+\end{lstlisting}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\end{document}
