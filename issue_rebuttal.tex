@@ -50,8 +50,8 @@
 \fancyfoot[C]{\thepage}
 
 % ── Tip/Warning boxes ────────────────────────────────────────────────────────
-\newtcolorbox{srsbox}{colback=blue!5,colframe=codeblue,title=\textbf{What Our SRS Says},fonttitle=\bfseries}
-\newtcolorbox{codebox}{colback=green!3,colframe=green,title=\textbf{What Our Code Actually Does},fonttitle=\bfseries}
+\newtcolorbox{srsbox}{colback=blue!5,colframe=codeblue,title=\textbf{What My SRS Says},fonttitle=\bfseries}
+\newtcolorbox{codebox}{colback=green!3,colframe=green,title=\textbf{What My Code Actually Does},fonttitle=\bfseries}
 \newtcolorbox{verdictbox}{colback=red!5,colframe=accent,title=\textbf{Verdict},fonttitle=\bfseries}
 \newtcolorbox{factbox}{colback=yellow!5,colframe=yellow!60!black,title=\textbf{Key Fact},fonttitle=\bfseries}
 
@@ -101,19 +101,19 @@ Ramkrishan Jangir (24293916033)
 \section{Introduction}
 % ══════════════════════════════════════════════════════════════════════════════
 
-On April 16, 2026, three issues were opened on our GitHub repository by the user \texttt{anshika289}. All three were filed within a short time window and follow the exact same template format.
+On April 16, 2026, three issues were opened on my GitHub repository by the user \texttt{anshika289}. All three were filed within a short time window and follow the exact same template format.
 
-After going through every single claim in these issues and comparing them line-by-line against our actual source code and our SRS document, we are confident that:
+After going through every single claim in these issues and comparing them line-by-line against my actual source code and my SRS document, I am confident that:
 
 \begin{itemize}
-  \item \textbf{Issue \#3} (marked ``Critical'') is \textbf{factually wrong}. The feature they say is missing is literally written in our code with clear comments. They did not read our source code.
-  \item \textbf{Issue \#2} has a \textbf{small valid point} buried under exaggerated claims. The system handles cycles safely, but we could show a better error message. That said, calling it a ``bug'' is a stretch --- our system never crashes or freezes from cycles.
-  \item \textbf{Issue \#4} describes a \textbf{feature that is not even in our SRS}. The data they want is already available through standard Kubernetes commands. Their framing makes it sound like a defect, but it is at best a nice-to-have improvement.
+  \item \textbf{Issue \#3} (marked ``Critical'') is \textbf{factually wrong}. The feature they say is missing is literally written in my code with clear comments. They did not read my source code.
+  \item \textbf{Issue \#2} has a \textbf{small valid point} buried under exaggerated claims. The system handles cycles safely, but I could show a better error message. That said, calling it a ``bug'' is a stretch --- my system never crashes or freezes from cycles.
+  \item \textbf{Issue \#4} describes a \textbf{feature that is not even in my SRS}. The data they want is already available through standard Kubernetes commands. Their framing makes it sound like a defect, but it is at best a nice-to-have improvement.
 \end{itemize}
 
 \subsection{A Note On Issue Quality}
 
-Before we begin the detailed rebuttal, we want to point out some serious quality concerns with these issues:
+Before I begin the detailed rebuttal, I want to point out some serious quality concerns with these issues:
 
 \begin{enumerate}
   \item \textbf{Not a single line of code is referenced.} Across all three issues, there is no file path, no function name, no line number. A proper bug report on a codebase should reference the actual code.
@@ -124,7 +124,7 @@ Before we begin the detailed rebuttal, we want to point out some serious quality
 
 \subsection{SRS Terminology (For Reference)}
 
-Our SRS document follows \textbf{IEEE 830-1998} conventions. The exact wording from SRS Section 1.2:
+My SRS document follows \textbf{IEEE 830-1998} conventions. The exact wording from SRS Section 1.2:
 
 \begin{quote}
 \textbf{MUST / SHALL:} Indicates a mandatory requirement. Failure to meet this requirement implies the system is non-compliant.
@@ -142,7 +142,7 @@ This distinction matters a lot. A ``MUST'' requirement that is unmet is a real p
 \section{Issue \#3 --- ``Resource Limit Enforcement Unclear (Critical)''}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\textit{We start with Issue \#3 because it is marked ``Critical'' and is the most egregiously wrong.}
+\textit{I am starting with Issue \#3 because it is marked ``Critical'' and is the most egregiously wrong.}
 
 \subsection{What They Claim}
 
@@ -152,7 +152,7 @@ This distinction matters a lot. A ``MUST'' requirement that is unmet is a real p
 \textbf{Impact:} ``May lead to pod eviction, OOM, or cluster instability.''
 \end{quote}
 
-\subsection{What Our SRS Says}
+\subsection{What My SRS Says}
 
 \begin{srsbox}
 \textbf{REQ-5.1} (SRS Section 4.5.3, Page 15): ``The system \textbf{MUST NOT} schedule a task if it would cause the cluster to exceed its resource quotas.''
@@ -160,7 +160,7 @@ This distinction matters a lot. A ``MUST'' requirement that is unmet is a real p
 \textbf{SRS Section 2.3} (Page 8): ``Resource Governance: The system strictly manages CPU and RAM usage to ensure it can run on low-cost hardware (`Free Tier') without crashing.''
 \end{srsbox}
 
-\subsection{What Our Code Actually Does}
+\subsection{What My Code Actually Does}
 
 \begin{codebox}
 The resource enforcement is implemented as a \textbf{hard gate} in \texttt{internal/optimizer/greedy.go}. Here is the exact code:
@@ -227,9 +227,9 @@ kubectl get adaptiveworkflow <name> -o yaml
 
 They write: ``It takes unknown amount of time if number of resource is exceeded.''
 
-This is not a bug. This is \textbf{the entire point of our system}. When all the available resource budget is used up by running tasks, the optimizer waits for some tasks to finish before starting new ones. The ``unknown time'' is just the time it takes for pods to complete their work. That is how every single DAG scheduler in existence works --- Argo Workflows, Apache Airflow, Tekton, all of them.
+This is not a bug. This is \textbf{the entire point of my system}. When all the available resource budget is used up by running tasks, the optimizer waits for some tasks to finish before starting new ones. The ``unknown time'' is just the time it takes for pods to complete their work. That is how every single DAG scheduler in existence works --- Argo Workflows, Apache Airflow, Tekton, all of them.
 
-Our SRS calls this ``Bin Packing'' (Section 1.4): fitting as many tasks as possible onto available hardware without crashing the nodes. That is exactly what the code does.
+My SRS calls this ``Bin Packing'' (Section 1.4): fitting as many tasks as possible onto available hardware without crashing the nodes. That is exactly what the code does.
 
 \subsection{About Their ``Pod Eviction, OOM'' Concern}
 
@@ -253,7 +253,7 @@ They say the system ``may lead to pod eviction, OOM, or cluster instability.'' T
 Steps to reproduce: ``Create a cyclic DAG: A $\to$ B $\to$ C $\to$ A. Submit using CLI.''
 \end{quote}
 
-\subsection{What Our SRS Says}
+\subsection{What My SRS Says}
 
 \begin{srsbox}
 \textbf{REQ-1.2} (SRS Section 4.1.3, Page 12): ``The system \textbf{MUST} validate that the graph contains no cycles (infinite loops).''
@@ -261,13 +261,13 @@ Steps to reproduce: ``Create a cyclic DAG: A $\to$ B $\to$ C $\to$ A. Submit usi
 \textbf{SRS Section 2.3} (Page 8): ``Workflow Ingestion \& Validation: The system accepts workflow definitions, validates them for logical correctness (e.g., no infinite loops), and prepares them for execution.''
 \end{srsbox}
 
-We will be honest here. Our SRS does say ``MUST validate'' for cycle detection. So on paper, this is a valid requirement to bring up. \textbf{However}, the issue dramatically exaggerates the impact and makes claims that are physically impossible given our architecture.
+I will be honest here. My SRS does say ``MUST validate'' for cycle detection. So on paper, this is a valid requirement to bring up. \textbf{However}, the issue dramatically exaggerates the impact and makes claims that are physically impossible given my architecture.
 
 \subsection{Why ``Infinite Loops or Scheduler Freeze'' Cannot Happen}
 
-Let us walk through what actually happens if someone submits a cycle like A $\to$ B $\to$ C $\to$ A.
+Let me walk through what actually happens if someone submits a cycle like A $\to$ B $\to$ C $\to$ A.
 
-Our optimizer (\texttt{internal/optimizer/greedy.go}, lines 72--83) only schedules a task if \textbf{ALL of its dependencies have succeeded}:
+My optimizer (\texttt{internal/optimizer/greedy.go}, lines 72--83) only schedules a task if \textbf{ALL of its dependencies have succeeded}:
 
 \begin{lstlisting}
 // Check all dependencies are Succeeded.
@@ -298,24 +298,24 @@ A cycle does \textbf{not} cause an infinite loop. It does \textbf{not} freeze th
 
 This is exactly the same behavior as Argo Workflows, by the way. If you submit a cyclic DAG to Argo, it does not crash either --- the stuck tasks just never progress.
 
-\subsection{What IS Missing (And We Acknowledge It)}
+\subsection{What IS Missing (And I Acknowledge It)}
 
 What is missing is an \textbf{explicit error message} at submission time. Ideally, when a user submits a YAML with a cycle, the system should immediately reject it and say ``Error: your DAG contains a cycle involving tasks A, B, C.''
 
-We do not have that validation step. The system handles cycles \textit{safely} (nothing breaks), but it does not handle them \textit{helpfully} (the user gets no clear message about why nothing is happening).
+I do not have that validation step yet. The system handles cycles \textit{safely} (nothing breaks), but it does not handle them \textit{helpfully} (the user gets no clear message about why nothing is happening).
 
 So REQ-1.2 is partially unmet --- not because the system is unsafe, but because it does not give a nice error. That is a usability enhancement, not a critical bug.
 
 \subsection{Problems With Their Issue}
 
 \begin{enumerate}
-  \item They claim ``may cause infinite loops or scheduler freeze.'' This is \textbf{impossible}. Our reconcile loop is stateless and runs on a fixed 10-second timer (controller line 264). It cannot loop infinitely or freeze.
+  \item They claim ``may cause infinite loops or scheduler freeze.'' This is \textbf{impossible}. My reconcile loop is stateless and runs on a fixed 10-second timer (controller line 264). It cannot loop infinitely or freeze.
   \item They provide no evidence that they actually tried submitting a cyclic DAG and observed a crash or freeze.
   \item Their ``Steps to Reproduce'' say ``Create a cyclic DAG: A $\to$ B $\to$ C $\to$ A. Submit using CLI.'' But they do not include any actual YAML, no CLI output, no logs. Did they actually try this?
 \end{enumerate}
 
 \begin{verdictbox}
-\textbf{Partially valid, but significantly overstated.} The SRS says MUST validate cycles, and we do not have an explicit validation message. But the claim of ``infinite loops or scheduler freeze'' is completely wrong --- the architecture makes that impossible. This should be classified as a \textbf{Low severity enhancement request}, not a bug.
+\textbf{Partially valid, but significantly overstated.} The SRS says MUST validate cycles, and I do not have an explicit validation message. But the claim of ``infinite loops or scheduler freeze'' is completely wrong --- the architecture makes that impossible. This should be classified as a \textbf{Low severity enhancement request}, not a bug.
 \end{verdictbox}
 
 \newpage
@@ -332,10 +332,10 @@ So REQ-1.2 is partially unmet --- not because the system is unsafe, but because 
 \textbf{Impact:} ``User cannot verify or trust ML component.''
 \end{quote}
 
-\subsection{What Our SRS Says}
+\subsection{What My SRS Says}
 
 \begin{srsbox}
-Here are the ML-related requirements from our SRS (Section 4.3.3, Page 14):
+Here are the ML-related requirements from my SRS (Section 4.3.3, Page 14):
 
 \textbf{REQ-3.1:} ``The system SHALL record the actual resource usage of every completed task.''
 
@@ -383,12 +383,12 @@ SELECT * FROM task_executions
 
 \subsection{About Their ``Confidence/Accuracy'' Demand}
 
-They say users should be able to see ``Confidence/accuracy'' for each prediction. Let us be real here:
+They say users should be able to see ``Confidence/accuracy'' for each prediction. Let me be real here:
 
 \begin{itemize}
   \item \textbf{No production workflow system does this.} Not Argo Workflows. Not Apache Airflow. Not Tekton. Not Prefect. Not Dagster. None of them show ``confidence scores'' for resource estimates in their CLI output.
   \item Per-prediction confidence is a concept from ML model evaluation, not from runtime scheduling systems. It makes sense in a Jupyter notebook, not in a \texttt{kubectl} command.
-  \item Even if we wanted to add it, our SRS does not require it.
+  \item Even if I wanted to add it, my SRS does not require it.
 \end{itemize}
 
 \begin{verdictbox}
@@ -403,7 +403,7 @@ They say users should be able to see ``Confidence/accuracy'' for each prediction
 
 \begin{longtable}{|p{2.2cm}|p{2cm}|p{3.5cm}|p{2.2cm}|p{3cm}|}
 \hline
-\textbf{Issue} & \textbf{Claimed Severity} & \textbf{SRS Requirement} & \textbf{Met?} & \textbf{Our Assessment} \\
+\textbf{Issue} & \textbf{Claimed Severity} & \textbf{SRS Requirement} & \textbf{Met?} & \textbf{My Assessment} \\
 \hline
 \#2 DAG Cycle Detection & Usability (Bug) & REQ-1.2: MUST validate no cycles & Partially (no error msg, but cycle-safe) & Low / Enhancement \\
 \hline
@@ -424,7 +424,7 @@ Out of 3 issues:
 
 \subsection{What Proper Issues Would Look Like}
 
-For comparison, a well-written issue on a codebase like ours would include:
+For comparison, a well-written issue on a codebase like mine would include:
 \begin{enumerate}
   \item A reference to the specific file and line number where the problem is.
   \item Actual reproduction steps with real YAML files, not vague instructions.
@@ -432,7 +432,7 @@ For comparison, a well-written issue on a codebase like ours would include:
   \item A clear distinction between ``the code crashes'' (bug) and ``I wish the code did X'' (feature request).
 \end{enumerate}
 
-None of the three issues meet any of these standards. They read like they were written based on a quick scan of our README, not from actually running the code or reading the implementation.
+None of the three issues meet any of these standards. They read like they were written based on a quick scan of my README, not from actually running the code or reading the implementation.
 
 \newpage
 
@@ -468,7 +468,7 @@ Metrics to StateDB & \texttt{internal/controller/adaptiveworkflow\_controller.go
 \rule{0.8\textwidth}{0.5pt}
 
 \vspace{0.5cm}
-\textit{This document was prepared by the development team in response to issues filed on our repository. We are happy to demonstrate any of the above code paths live during the evaluation.}
+\textit{This document was prepared in response to issues filed on my repository. I am happy to demonstrate any of the above code paths live during the evaluation.}
 
 \vspace{0.3cm}
 --- Aman Githala, Ravi Kumar, Chandan Chaurasia, Ramkrishan Jangir
