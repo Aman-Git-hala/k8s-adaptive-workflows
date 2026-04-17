@@ -3,7 +3,7 @@
 % ── Packages ──────────────────────────────────────────────────────────────────
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{graphicx}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{enumitem}
@@ -76,20 +76,6 @@
 
 \vspace{2cm}
 
-{\large Prepared by:}\\[0.3cm]
-{\large
-Aman Githala (24293916037) \\
-Ravi Kumar (24293916042) \\
-Chandan Chaurasia (24293916019) \\
-Ramkrishan Jangir (24293916033)
-}
-
-\vspace{2cm}
-
-{\large Presented to:}\\[0.2cm]
-{\large\textbf{Asst. Prof. Rekha R}}\\[0.2cm]
-{\normalsize Department of Computer Science \& Engineering}
-
 \vfill
 {\large April 2026}
 \end{titlepage}
@@ -101,13 +87,13 @@ Ramkrishan Jangir (24293916033)
 \section{Introduction}
 % ══════════════════════════════════════════════════════════════════════════════
 
-On April 16, 2026, three issues were opened on my GitHub repository by the user \texttt{anshika289}. All three were filed within a short time window and follow the exact same template format.
+On April 16, 2026, three issues were opened on my GitHub repository by the user \texttt{anshika289}. 
 
 After going through every single claim in these issues and comparing them line-by-line against my actual source code and my SRS document, I am confident that:
 
 \begin{itemize}
   \item \textbf{Issue \#3} (marked ``Critical'') is \textbf{factually wrong}. The feature they say is missing is literally written in my code with clear comments. They did not read my source code.
-  \item \textbf{Issue \#2} has a \textbf{small valid point} buried under exaggerated claims. The system handles cycles safely, but I could show a better error message. That said, calling it a ``bug'' is a stretch --- my system never crashes or freezes from cycles.
+  \item \textbf{Issue \#2} has a \textbf{small valid point} buried under exaggerated claims. The system handles cycles safely, but I could show a better error message. That said, calling it a ``bug'' is a stretch, my system never crashes or freezes from cycles.
   \item \textbf{Issue \#4} describes a \textbf{feature that is not even in my SRS}. The data they want is already available through standard Kubernetes commands. Their framing makes it sound like a defect, but it is at best a nice-to-have improvement.
 \end{itemize}
 
@@ -118,7 +104,6 @@ Before I begin the detailed rebuttal, I want to point out some serious quality c
 \begin{enumerate}
   \item \textbf{Not a single line of code is referenced.} Across all three issues, there is no file path, no function name, no line number. A proper bug report on a codebase should reference the actual code.
   \item \textbf{No reproduction evidence.} None of the issues include logs, \texttt{kubectl} output, screenshots, or any proof that the described behavior was actually observed.
-  \item \textbf{Identical template structure.} All three issues use the exact same format (Bug Type $\to$ Description $\to$ Steps $\to$ Expected $\to$ Actual $\to$ Impact $\to$ Fix), which strongly suggests they were written in a batch without individually investigating each claim.
   \item \textbf{The severity classifications are wrong.} Issue \#3 is marked ``Critical'' for a feature that is already fully implemented. This is either careless or intentionally misleading.
 \end{enumerate}
 
@@ -134,7 +119,7 @@ My SRS document follows \textbf{IEEE 830-1998} conventions. The exact wording fr
 \textbf{MAY:} Indicates an optional feature that will be implemented if time permits.
 \end{quote}
 
-This distinction matters a lot. A ``MUST'' requirement that is unmet is a real problem. But a feature that the SRS never mentions is not a ``bug'' --- it is a suggestion.
+This distinction matters a lot. A ``MUST'' requirement that is unmet is a real problem. But a feature that the SRS never mentions is not a ``bug''.
 
 \newpage
 
@@ -227,7 +212,7 @@ kubectl get adaptiveworkflow <name> -o yaml
 
 They write: ``It takes unknown amount of time if number of resource is exceeded.''
 
-This is not a bug. This is \textbf{the entire point of my system}. When all the available resource budget is used up by running tasks, the optimizer waits for some tasks to finish before starting new ones. The ``unknown time'' is just the time it takes for pods to complete their work. That is how every single DAG scheduler in existence works --- Argo Workflows, Apache Airflow, Tekton, all of them.
+This is not a bug. This is \textbf{the entire point of my system}. When all the available resource budget is used up by running tasks, the optimizer waits for some tasks to finish before starting new ones. The ``unknown time'' is just the time it takes for pods to complete their work. That is how every single DAG scheduler in existence works, Argo Workflows, Apache Airflow, Tekton, all of them.
 
 My SRS calls this ``Bin Packing'' (Section 1.4): fitting as many tasks as possible onto available hardware without crashing the nodes. That is exactly what the code does.
 
@@ -409,7 +394,7 @@ They say users should be able to see ``Confidence/accuracy'' for each prediction
 \hline
 \#3 Resource Enforcement & \textbf{Critical} (Bug) & REQ-5.1: MUST NOT exceed quotas & \textbf{Fully met} (greedy.go L90--105) & \textbf{Invalid} --- code not reviewed \\
 \hline
-\#4 ML Prediction Visibility & Usability (Bug) & No SRS requirement exists for this & Visible via \texttt{kubectl}, logs, dashboard & Low / Enhancement \\
+\#4 ML Prediction Visibility & Usability (Bug) & No SRS requirement exists for this & Visible via \texttt{kubectl}, logs, dashboard & Not mentioned in the SRS \\
 \hline
 \end{longtable}
 
@@ -442,24 +427,55 @@ None of the three issues meet any of these standards. They read like they were w
 
 For easy verification, here is exactly where to look for each claimed ``missing'' feature:
 
-\begin{longtable}{|p{4cm}|p{5cm}|p{4cm}|}
-\hline
-\textbf{What They Claim is Missing} & \textbf{File} & \textbf{Lines} \\
-\hline
-Resource limit enforcement & \texttt{internal/optimizer/greedy.go} & Lines 48--63 (usage sum), Lines 90--105 (hard gate) \\
-\hline
-Resource usage tracking & \texttt{internal/controller/adaptiveworkflow\_controller.go} & Line 249: \texttt{computeResourceUsage()} \\
-\hline
-Resource usage in CRD & \texttt{api/v1/adaptiveworkflow\_types.go} & Line 100: \texttt{CurrentResourceUsage} field \\
-\hline
-Dependency checking (cycle safety) & \texttt{internal/optimizer/greedy.go} & Lines 72--83 (all deps must be Succeeded) \\
-\hline
-ML predictions in status & \texttt{internal/controller/adaptiveworkflow\_controller.go} & Lines 235--237: \texttt{AllocatedResources} written per task \\
-\hline
-Inference engine predictions & \texttt{inference-engine/server.py} & \texttt{Predict()} RPC handler --- logs all predictions \\
-\hline
-Metrics to StateDB & \texttt{internal/controller/adaptiveworkflow\_controller.go} & Lines 312--340: \texttt{r.StateDB.RecordExecution()} \\
-\hline
+\renewcommand{\arraystretch}{1.4}
+\begin{longtable}{
+  >{\raggedright\arraybackslash}p{4.5cm}
+  >{\raggedright\ttfamily\small\arraybackslash}p{5.5cm}
+  >{\raggedright\arraybackslash}p{4cm}}
+\toprule
+\textbf{What They Claim is Missing} & \textnormal{\textbf{File}} & \textbf{Lines} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{What They Claim is Missing} & \textnormal{\textbf{File}} & \textbf{Lines} \\
+\midrule
+\endhead
+
+Resource limit enforcement &
+internal/optimizer/greedy.go &
+L48--63 (usage sum), L90--105 (hard gate) \\
+\midrule
+
+Resource usage tracking &
+internal/controller/ adaptiveworkflow\_controller.go &
+L249: \textnormal{\texttt{computeResourceUsage()}} \\
+\midrule
+
+Resource usage in CRD &
+api/v1/adaptiveworkflow\_types.go &
+L100: \textnormal{\texttt{CurrentResourceUsage}} field \\
+\midrule
+
+Dependency checking (cycle safety) &
+internal/optimizer/greedy.go &
+L72--83 (all deps must be Succeeded) \\
+\midrule
+
+ML predictions in status &
+internal/controller/ adaptiveworkflow\_controller.go &
+L235--237: \textnormal{\texttt{AllocatedResources}} per task \\
+\midrule
+
+Inference engine predictions &
+inference-engine/server.py &
+\textnormal{\texttt{Predict()}} RPC handler \\
+\midrule
+
+Metrics to StateDB &
+internal/controller/ adaptiveworkflow\_controller.go &
+L312--340: \textnormal{\texttt{RecordExecution()}} \\
+\bottomrule
 \end{longtable}
 
 \vspace{1cm}
@@ -471,7 +487,7 @@ Metrics to StateDB & \texttt{internal/controller/adaptiveworkflow\_controller.go
 \textit{This document was prepared in response to issues filed on my repository. I am happy to demonstrate any of the above code paths live during the evaluation.}
 
 \vspace{0.3cm}
---- Aman Githala, Ravi Kumar, Chandan Chaurasia, Ramkrishan Jangir
+--- Aman Githala
 \end{center}
 
 \end{document}
